@@ -14,6 +14,7 @@ import { Boy } from './boys.js';
 import { Projectiles } from './projectiles.js';
 import { Effects } from './effects.js';
 import { Sfx } from './audio.js';
+import { Music } from './music.js';
 import { UI } from './ui.js';
 import { makeRangeRing } from './util.js';
 
@@ -55,6 +56,7 @@ export class Game {
     this.effects = new Effects(this);
     this.projectiles = new Projectiles(this);
     this.audio = new Sfx();
+    this.music = new Music(this.audio);
 
     this.golems = [];
     this.forts = [];
@@ -385,6 +387,7 @@ export class Game {
     this.sackHp = this.maxSackHp = d.sack;
     this.ui.setWavePreview();
     this.audio.ensure();
+    this.music.start();
     this.ui.hideTitle();
     this.ui.toast(this.touch ? 'Tap a fort card, then build it in the bush along the fire trail!' : 'Pick a fort (1–7) and build it in the bush along the fire trail!');
   }
@@ -430,19 +433,6 @@ export class Game {
     return g;
   }
 
-  // Sky lions ignore the trail and fly from their rift straight over the houses.
-  flightPath(rift) {
-    this.flights = this.flights || [];
-    if (!this.flights[rift]) {
-      // Straight over the bush to the gap where the trail enters the sack, then in.
-      const p = this.world.rifts[rift].pos;
-      const gate = this.path.pointAt(this.path.length - 26);
-      const mid = [(p.x + gate.x) / 2, (p.z + gate.z) / 2 - 6];
-      this.flights[rift] = new TrailPath(new Set(), [[p.x, p.z], mid, [gate.x, gate.z], [1, 0]]);
-    }
-    return this.flights[rift];
-  }
-
   // Seconds until the slowest golem (on the trail or still to spawn) would reach the sack.
   timeLeftForGolems() {
     let need = 0;
@@ -453,7 +443,7 @@ export class Game {
     for (const it of this.queue) {
       const r = it.rift || 0;
       const sp = this.spurs[r];
-      const walk = GOLEMS[it.type].flying ? this.flightPath(r).length : sp ? sp.length + this.path.length - this.joinDists[r] : this.path.length;
+      const walk = sp ? sp.length + this.path.length - this.joinDists[r] : this.path.length;
       need = Math.max(need, t + walk / GOLEMS[it.type].speed);
       t += it.gap;
     }
@@ -690,7 +680,6 @@ export class Game {
     this.world.setTrail(this.path);
     // Any fort sitting on the new trail gets packed up, full refund.
     this.updateJoins();
-    this.flights = [];
     for (const f of [...this.forts]) {
       if (this.path.distanceTo(f.pos.x, f.pos.z) < 3.2) this.packUp(f, 'the new trail');
     }
@@ -743,12 +732,13 @@ export class Game {
   }
 
   toggleSpeed() {
-    const SPEEDS = [1, 2, 3, 5, 10];
+    const SPEEDS = [1, 2, 3, 5];
     this.speed = SPEEDS[(SPEEDS.indexOf(this.speed) + 1) % SPEEDS.length];
   }
 
   toggleMute() {
     this.audio.muted = !this.audio.muted;
+    this.music.applyLevel();
   }
 
   togglePause() {
@@ -815,6 +805,7 @@ export class Game {
       else if ((k === 'delete' || k === 'backspace') && this.selected) this.sellFort(this.selected);
       else if (k === 'f') this.toggleSpeed();
       else if (k === 'm') this.toggleMute();
+      else if (k === 'n') this.music.toggle();
       else if (k === 'p') this.togglePause();
     });
     window.addEventListener('keyup', (e) => this.keys.delete(e.key.toLowerCase()));
@@ -950,6 +941,8 @@ export class Game {
     for (const p of this.parents) p.place();
     this.updatePointer();
     this.effects.update(dt, raw);
+    const mood = this.over || this.phase === 'morning' ? 'calm' : this.phase === 'day' && (this.golems.length || this.queue.length) ? 'action' : this.phase === 'day' ? 'calm' : 'night';
+    this.music.update(mood, this.paused);
     this.ui.update(raw);
     this.renderer.render(this.scene, this.camera);
   }

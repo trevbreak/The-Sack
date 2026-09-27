@@ -30,14 +30,15 @@
         <button id="crewBtn" class="iconbtn crewbtn" title="The crew">👦</button>
         <button id="speedBtn" class="iconbtn" title="Game speed (F)">1×</button>
         <button id="pauseBtn" class="iconbtn" title="Pause (P)">⏸</button>
+        <button id="musicBtn" class="iconbtn" title="Music (N)">🎵</button>
         <button id="muteBtn" class="iconbtn" title="Sound (M)">🔊</button>
       </div>
     </div>
 
     <div id="roster" class="panel">
-      <h4>The Crew</h4>
+      <h4 id="crewHead" title="Show or hide the crew">The Crew <span id="crewSum"></span><i class="caret">▾</i></h4>
       <div id="rosterList"></div>
-      <p class="note">Click a boy to find his fort. With a fort selected, click a boy to send him there.</p>
+      <p class="note">Click a kid to find their fort. With a fort selected, click a kid to send them there.</p>
     </div>
 
     <div id="rightCol">
@@ -97,6 +98,7 @@
           <span>scroll to zoom</span>
           <span><kbd>F</kbd> speed</span>
           <span><kbd>P</kbd> pause</span>
+          <span><kbd>M</kbd> sound · <kbd>N</kbd> music</span>
         </div>
       </div>
     </div>

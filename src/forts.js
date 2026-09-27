@@ -576,7 +576,7 @@ export class Fort {
     let cur = target;
     for (let i = 0; i < this.weapon.chain; i++) {
       let next = null;
-      let bd = 36;
+      let bd = 20;
       for (const g of this.game.golems) {
         if (!g.targetable || hit.includes(g)) continue;
         const d = (g.pos.x - cur.pos.x) ** 2 + (g.pos.z - cur.pos.z) ** 2;
@@ -592,7 +592,7 @@ export class Fort {
     }
     this.game.effects.bolt(pts, 0x8fe8ff);
     hit.forEach((g, i) => {
-      g.takeDamage(st.damage * Math.pow(0.7, i), this.weapon.dmgType, this);
+      g.takeDamage(st.damage * Math.pow(0.65, i), this.weapon.dmgType, this);
       this.game.effects.burst(pts[i + 1], 0xbff4ff, 3, { speed: 3, up: 3, size: 0.1, life: 0.3 });
     });
   }
