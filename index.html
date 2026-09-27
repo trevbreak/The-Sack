@@ -2,7 +2,14 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#1b1a22" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/icon.svg" />
+    <link rel="manifest" href="/manifest.webmanifest" />
     <title>The Sack</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -20,6 +27,7 @@
       <div class="stat"><span class="ic">☀️</span><div><b id="wave">1</b><small id="bestLbl">day of the hols</small></div></div>
       <div class="stat"><span class="ic">👦</span><div><b id="boys">0/0</b><small>free / crew</small></div></div>
       <div class="btns">
+        <button id="crewBtn" class="iconbtn crewbtn" title="The crew">👦</button>
         <button id="speedBtn" class="iconbtn" title="Game speed (F)">1×</button>
         <button id="pauseBtn" class="iconbtn" title="Pause (P)">⏸</button>
         <button id="muteBtn" class="iconbtn" title="Sound (M)">🔊</button>
@@ -72,7 +80,14 @@
           <div class="diffdesc" id="diffDesc"></div>
         </div>
         <button id="playBtn">Let's go!</button>
-        <div class="controls">
+        <div class="lbwrap">
+          <h4 id="titleBoardTitle">🏆 Household leaderboard</h4>
+          <div id="titleBoard"></div>
+        </div>
+        <div class="controls touchonly">
+          <span>Drag to move</span><span>pinch to zoom</span><span>twist with two fingers to rotate</span><span>tap a card, then tap twice on the map to build</span>
+        </div>
+        <div class="controls keysonly">
           <span><kbd>1</kbd>–<kbd>7</kbd> build</span>
           <span><kbd>R</kbd> recruit</span>
           <span><kbd>T</kbd> trail works</span>
@@ -91,6 +106,15 @@
         <h1 id="endTitle"></h1>
         <p class="story" id="endText"></p>
         <div id="endStats" class="endstats"></div>
+        <form id="scoreForm" class="scoreform" autocomplete="off">
+          <label for="scoreName">Put your name on the household leaderboard</label>
+          <div class="scorerow">
+            <input id="scoreName" maxlength="20" placeholder="Your name" enterkeyhint="done" />
+            <button type="submit" id="scoreSave">Save score</button>
+          </div>
+        </form>
+        <div id="scoreSaved" class="scoresaved hidden"></div>
+        <div id="endBoard"></div>
         <div class="endbtns">
           <button id="endlessBtn" class="ghostbtn">Keep going (endless)</button>
           <button id="againBtn">Play again</button>

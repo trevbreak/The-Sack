@@ -1,5 +1,6 @@
 import { WEAPONS, GOLEMS, FORT_LEVELS, WEAPON_LEVELS, TEAM_LEVEL, TEAM_BONUS, weaponUpgradeCost, MAX_BOYS, makeWave, summarizeWave, weekOf, DIFFICULTIES } from './config.js';
 import { DETOURS } from './path.js';
+import { fetchScores, submitScore, lastName, boardHTML } from './leaderboard.js';
 
 const $ = (id) => document.getElementById(id);
 const stars = (lvl) => '★'.repeat(lvl + 1) + '☆'.repeat(WEAPON_LEVELS.length - 1 - lvl);
@@ -51,6 +52,7 @@ export class UI {
     this.buildCards();
     this.bind();
     this.renderDifficulty();
+    this.refreshBoards();
   }
 
   buildCards() {
@@ -96,6 +98,7 @@ export class UI {
     });
     this.e.waveBtn.addEventListener('click', () => g.mainAction());
     this.e.speed.addEventListener('click', () => g.toggleSpeed());
+    $('crewBtn').addEventListener('click', () => document.body.classList.toggle('show-crew'));
     this.e.mute.addEventListener('click', () => g.toggleMute());
     this.e.pause.addEventListener('click', () => g.togglePause());
     this.e.panel.addEventListener('click', (ev) => {
@@ -152,6 +155,10 @@ export class UI {
     });
     $('againBtn').addEventListener('click', () => location.reload());
     $('endlessBtn').addEventListener('click', () => g.continueEndless());
+    $('scoreForm').addEventListener('submit', (ev) => {
+      ev.preventDefault();
+      this.saveScore();
+    });
   }
 
   // ---------- per-frame ----------
@@ -212,14 +219,15 @@ export class UI {
     const g = this.g;
     let h = '';
     if (g.paused) h = '⏸ Paused — press <b>P</b> to keep going';
+    else if (g.buildKey && g.touch) h = `Tap the map to place your <b>${WEAPONS[g.buildKey].name}</b>, tap again to build · tap the card to cancel`;
     else if (g.buildKey) h = `Click out in the bush to build a <b>${WEAPONS[g.buildKey].name}</b> · <b>Shift</b>-click to keep building · Right-click/<b>Esc</b> to cancel`;
     else if (!g.started) h = '';
     else if (g.phase === 'dusk' || g.phase === 'night') h = '🍝 The parents are calling everyone in. Press <b>Space</b> to skip to tomorrow.';
-    else if (!g.forts.length) h = 'Pick a fort from the bar below (<b>1–7</b>) and build it near the fire trail behind the houses.';
+    else if (!g.forts.length) h = g.touch ? 'Tap a fort card below, then tap the map near the fire trail.' : 'Pick a fort from the bar below (<b>1–7</b>) and build it near the fire trail behind the houses.';
     else {
       const un = g.forts.filter((f) => !f.crew.length).length;
       if (un) h = `⚠️ ${un} fort${un > 1 ? 's have' : ' has'} nobody in ${un > 1 ? 'them' : 'it'}. Click it and send a boy, or recruit one (<b>R</b>).`;
-      else if (g.phase === 'morning') h = 'Morning! Build, upgrade, dig the trail (<b>T</b>), then press <b>Space</b> to head out.';
+      else if (g.phase === 'morning') h = g.touch ? 'Morning! Build and upgrade, then tap <b>Head out</b>.' : 'Morning! Build, upgrade, dig the trail (<b>T</b>), then press <b>Space</b> to head out.';
     }
     setHTML(this.e.hint, h);
     this.e.hint.classList.toggle('hidden', !h);
@@ -399,6 +407,12 @@ export class UI {
       <div><b>${g.stats.kills}</b><span>golems smashed</span></div>
       <div><b>${g.boys.length}</b><span>boys in the crew</span></div>`;
     $('endlessBtn').classList.add('hidden');
+    $('scoreName').value = lastName();
+    $('scoreForm').classList.remove('hidden');
+    $('scoreSave').disabled = false;
+    $('scoreSaved').classList.add('hidden');
+    this.refreshBoards();
+    setTimeout(() => $('scoreName').focus(), 300);
     this.e.end.classList.toggle('win', record);
     this.e.end.classList.remove('hidden');
   }
@@ -409,7 +423,43 @@ export class UI {
       (d) => `<button data-diff="${d.key}" class="${d.key === g.diffKey ? 'on' : ''}"><span>${d.icon}</span>${d.name}</button>`,
     ).join('');
     const d = g.diff;
-    $('diffDesc').innerHTML = `${d.desc}${g.best ? ` <b>Best: day ${g.best}</b>` : ''}`;
+    $('diffDesc').innerHTML = `${d.desc}${g.best ? ` <b>Your best: day ${g.best}</b>` : ''}`;
+    if (this.scores) this.renderBoards();
+  }
+
+  // ---------- leaderboard ----------
+  async refreshBoards(highlight = null) {
+    const { scores, shared } = await fetchScores();
+    this.scores = scores;
+    this.sharedScores = shared;
+    this.renderBoards(highlight);
+  }
+
+  renderBoards(highlight = null) {
+    const g = this.g;
+    const where = this.sharedScores ? 'Household leaderboard' : 'Leaderboard (this computer)';
+    setText($('titleBoardTitle'), `🏆 ${where} · ${g.diff.name}`);
+    $('titleBoard').innerHTML = boardHTML(this.scores, g.diffKey, { limit: 5 });
+    $('endBoard').innerHTML = `<h4>🏆 ${where} · ${g.diff.name}</h4>${boardHTML(this.scores, g.diffKey, { limit: 10, highlight })}`;
+  }
+
+  async saveScore() {
+    const g = this.g;
+    const input = $('scoreName');
+    const name = input.value.trim();
+    if (!name) {
+      input.focus();
+      return;
+    }
+    $('scoreSave').disabled = true;
+    const { entry, shared } = await submitScore({ name, difficulty: g.diffKey, day: g.wave, kills: g.stats.kills });
+    $('scoreForm').classList.add('hidden');
+    await this.refreshBoards(entry.id);
+    const place = this.scores.filter((s) => s.difficulty === g.diffKey).findIndex((s) => s.id === entry.id) + 1;
+    const saved = $('scoreSaved');
+    saved.textContent = `Saved! ${name} is #${place} on ${g.diff.name}${shared ? '' : ' (on this computer only: the leaderboard server wasn\'t reachable)'}.`;
+    saved.classList.remove('hidden');
+    g.audio.play(place === 1 ? 'win' : 'coin');
   }
 
   // ---------- trail works ----------

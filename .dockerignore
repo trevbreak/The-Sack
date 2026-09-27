@@ -1,5 +1,8 @@
 node_modules
 dist
 data
-.DS_Store
+.git
+.github
 .gstack
+.DS_Store
+unraid

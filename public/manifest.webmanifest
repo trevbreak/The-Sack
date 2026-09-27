@@ -1,0 +1,11 @@
+{
+  "name": "The Sack",
+  "short_name": "The Sack",
+  "description": "A cul-de-sac fort defence game.",
+  "start_url": "/",
+  "display": "fullscreen",
+  "orientation": "any",
+  "background_color": "#1b1a22",
+  "theme_color": "#1b1a22",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

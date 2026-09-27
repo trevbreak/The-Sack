@@ -1,0 +1,15 @@
+# Run The Sack with Docker:
+#   docker compose up -d        (pulls the published image)
+#   docker compose up -d --build (builds it from this folder instead)
+# Then open http://<this-machine>:8080 on any computer in the house.
+services:
+  the-sack:
+    image: ghcr.io/trevbreak/the-sack:latest
+    build: .
+    container_name: the-sack
+    ports:
+      - "8080:8080"
+    volumes:
+      # The household leaderboard lives here, so it survives updates.
+      - ./data:/data
+    restart: unless-stopped
