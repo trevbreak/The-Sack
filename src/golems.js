@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { GOLEMS } from './config.js';
+import { ELITES, GOLEMS } from './config.js';
 import { BODIES, extraMats } from './creatures.js';
 
 const limb = new THREE.BoxGeometry(0.42, 1, 0.44);
@@ -79,9 +79,16 @@ function mats(key) {
 }
 
 const tmpV = new THREE.Vector3();
+const ELITE_RING = new THREE.RingGeometry(0.85, 1.1, 28).rotateX(-Math.PI / 2);
+const SHIELD_GEO = new THREE.IcosahedronGeometry(1.5, 1);
+const eliteMats = {};
+function eliteMat(key) {
+  return (eliteMats[key] ||= new THREE.MeshBasicMaterial({ color: ELITES[key].color, transparent: true, opacity: 0.75, depthWrite: false, side: THREE.DoubleSide }));
+}
+const shieldMat = new THREE.MeshBasicMaterial({ color: 0x9fc4ff, transparent: true, opacity: 0.22, depthWrite: false, wireframe: false });
 
 export class Golem {
-  constructor(game, key, hpScale = 1, rewardScale = 1, rift = 0) {
+  constructor(game, key, hpScale = 1, rewardScale = 1, rift = 0, opts = {}) {
     this.game = game;
     // Golems from a later rift walk its spur trail first, then join the main trail.
     this.rift = rift;
@@ -99,9 +106,32 @@ export class Golem {
     this.sinceHit = 0;
     this.key = key;
     const d = (this.def = GOLEMS[key]);
-    this.maxHp = Math.round(d.hp * hpScale);
+    // Weekly twists, then any tougher-variant rolls (giant, speedy, shielded, brood).
+    const mods = game.mods;
+    this.elite = opts.elite || [];
+    this.mini = !!opts.mini;
+    let hp = d.hp * hpScale * (mods.golemHp['*'] || 1) * (mods.golemHp[key] || 1);
+    let reward = d.reward * rewardScale * mods.reward;
+    let size = d.size;
+    this.baseSpeed = game.golemSpeed(key, this.elite);
+    for (const e of this.elite) {
+      const E = ELITES[e];
+      hp *= E.hp || 1;
+      reward *= E.reward || 1;
+      size *= E.size || 1;
+    }
+    if (this.mini) {
+      hp *= 0.3;
+      reward *= 0.25;
+      size *= 0.55;
+      this.baseSpeed *= 1.2;
+    }
+    this.size = size;
+    this.maxHp = Math.round(hp);
     this.hp = this.maxHp;
-    this.reward = Math.max(1, Math.round(d.reward * rewardScale));
+    this.shield = this.elite.includes('shielded') ? this.maxHp * ELITES.shielded.shield : 0;
+    this.maxShield = this.shield;
+    this.reward = Math.max(1, Math.round(reward));
     this.dist = 0;
     this.lateral = (Math.random() - 0.5) * (d.boss ? 0.4 : 1.6);
     this.alive = true;
@@ -110,11 +140,12 @@ export class Golem {
     this.slowUntil = 0;
     this.flash = 0;
     this.phase = Math.random() * 6;
-    this.curSpeed = d.speed;
+    this.curSpeed = this.baseSpeed;
     this.emerge = 0;
     this.pos = new THREE.Vector3();
     this.tan = new THREE.Vector3();
     this.build();
+    this.buildElite();
     this.buildHp();
     this.update(0);
   }
@@ -131,7 +162,7 @@ export class Golem {
       // Not a golem: a lion, spider, drop bear or bunyip.
       const P = BODIES[d.body](body, { body: this.bodyMat, glow: m.glow, extra: m.extra, ...extraMats });
       this.parts = { body, ...P };
-      root.scale.setScalar(d.size);
+      root.scale.setScalar(this.size);
       root.traverse((o) => {
         if (o.isMesh) o.castShadow = true;
       });
@@ -255,12 +286,28 @@ export class Golem {
       body.add(twig);
     }
 
-    root.scale.setScalar(d.size);
+    root.scale.setScalar(this.size);
     root.traverse((o) => {
       if (o.isMesh) o.castShadow = true;
     });
     this.root = root;
     this.game.scene.add(root);
+  }
+
+  // Coloured rings at the feet (one per variant) and a bubble for shielded ones.
+  buildElite() {
+    this.elite.forEach((e, i) => {
+      const ring = new THREE.Mesh(ELITE_RING, eliteMat(e));
+      ring.position.y = 0.06 + i * 0.02;
+      ring.scale.setScalar(1 + i * 0.3);
+      ring.renderOrder = 5;
+      this.root.add(ring);
+    });
+    if (this.shield > 0) {
+      this.shieldMesh = new THREE.Mesh(SHIELD_GEO, shieldMat);
+      this.shieldMesh.position.y = 1.35;
+      this.root.add(this.shieldMesh);
+    }
   }
 
   buildHp() {
@@ -290,7 +337,7 @@ export class Golem {
 
   // Where shots should aim (flying creatures are up in the air).
   aimPoint(out = new THREE.Vector3()) {
-    return out.set(this.pos.x, this.lift + this.def.size * 1.3, this.pos.z);
+    return out.set(this.pos.x, this.lift + this.size * 1.3, this.pos.z);
   }
 
   // How far this golem still has to walk to reach the sack.
@@ -320,7 +367,7 @@ export class Golem {
   }
 
   headPos() {
-    return new THREE.Vector3(this.pos.x, this.lift + 2.7 * this.def.size, this.pos.z);
+    return new THREE.Vector3(this.pos.x, this.lift + 2.7 * this.size, this.pos.z);
   }
 
   update(dt) {
@@ -330,7 +377,7 @@ export class Golem {
     if (this.retreating) {
       // Sink back into the ground and slink off into the bush.
       this.emerge -= dt * 0.8;
-      this.root.position.y = -(1 - this.emerge) * 2.6 * d.size;
+      this.root.position.y = -(1 - this.emerge) * 2.6 * this.size;
       this.hpGroup.visible = false;
       if (this.emerge <= 0) {
         this.alive = false;
@@ -340,7 +387,7 @@ export class Golem {
     }
     if (this.emerge < 1) this.emerge = Math.min(1, this.emerge + dt * 0.9);
     if (g.time > this.slowUntil) this.slowAmt = 0;
-    this.curSpeed = d.speed * (1 - this.slowAmt) * (this.emerge < 1 ? 0.5 : 1) * (this.submerged ? 1.3 : 1);
+    this.curSpeed = this.baseSpeed * (1 - this.slowAmt) * (this.emerge < 1 ? 0.5 : 1) * (this.submerged ? 1.3 : 1);
     this.dist += this.curSpeed * dt;
     this.abilities(dt);
     if (this.onSpur && this.dist >= this.trail.length) {
@@ -355,17 +402,17 @@ export class Golem {
     }
     this.placeAt(this.dist, this.pos, this.tan);
     // Height: fliers soar, pouncing spiders arc through the air, bunyips sink.
-    let y = -(1 - this.emerge) * 2.6 * d.size;
+    let y = -(1 - this.emerge) * 2.6 * this.size;
     if (d.flying) y += Math.min(1, this.emerge * 1.5) * (4.2 + Math.sin(this.phase * 0.5) * 0.3);
     if (this.hopping > 0) y += Math.sin((1 - this.hopping / 0.4) * Math.PI) * 2.2;
     if (d.burrow) this.sink = THREE.MathUtils.lerp(this.sink || 0, this.submerged ? 1 : 0, Math.min(1, dt * 6));
-    if (this.sink) y -= this.sink * 1.6 * d.size;
+    if (this.sink) y -= this.sink * 1.6 * this.size;
     this.lift = Math.max(0, y);
     this.root.position.set(this.pos.x, y, this.pos.z);
     this.root.rotation.y = Math.atan2(this.tan.x, this.tan.z);
 
     // Stompy walk
-    this.phase += (dt * this.curSpeed * 2.2) / d.size;
+    this.phase += (dt * this.curSpeed * 2.2) / this.size;
     const s = Math.sin(this.phase);
     const P = this.parts;
     if (P.legL) {
@@ -386,14 +433,22 @@ export class Golem {
       this.hp = Math.min(this.maxHp, this.hp + this.maxHp * d.regen * dt);
       if (Math.random() < dt * 4) this.game.effects.burst(this.headPos(), 0x7dff6a, 1, { speed: 0.5, up: 2, size: 0.12, gravity: -2 });
     }
+    if (this.shieldMesh) {
+      this.shieldMesh.visible = this.shield > 0;
+      this.shieldMesh.rotation.y += dt * 0.8;
+      this.shieldMesh.scale.setScalar(0.85 + 0.15 * (this.shield / this.maxShield) + Math.sin(g.time * 5) * 0.03);
+    }
+    if (this.elite.includes('speedy') && Math.random() < dt * 14) {
+      this.game.effects.burst(this.pos.clone().setY(this.lift + 0.4), 0xbff8ff, 1, { speed: 0.3, up: 0.5, size: 0.14, life: 0.35, gravity: 0 });
+    }
     if (this.blink) this.blink.visible = Math.sin(this.phase * 3) > 0;
     this.flash = Math.max(0, this.flash - dt);
-    this.bodyMat.emissive.setHex(this.flash > 0 ? 0xffffff : this.slowAmt > 0 ? 0x123e70 : d.emissive);
+    this.bodyMat.emissive.setHex(this.flash > 0 ? 0xffffff : this.slowAmt >= 1 ? 0x3a8ad0 : this.slowAmt > 0 ? 0x123e70 : d.emissive);
 
     const ratio = Math.max(0, this.hp / this.maxHp);
     this.hpGroup.visible = ratio < 0.999 && this.emerge >= 1 && !this.submerged;
     if (this.hpGroup.visible) {
-      this.hpGroup.position.set(this.pos.x, this.lift + 3.0 * d.size + 0.2, this.pos.z);
+      this.hpGroup.position.set(this.pos.x, this.lift + 3.0 * this.size + 0.2, this.pos.z);
       this.hpGroup.quaternion.copy(g.camera.quaternion);
       this.hpFg.scale.x = Math.max(0.001, ratio);
       this.hpMat.color.setHex(ratio > 0.5 ? 0x5ee05e : ratio > 0.25 ? 0xffd23e : 0xff4a3a);
@@ -446,18 +501,46 @@ export class Golem {
     this.emerge = Math.min(this.emerge, 1);
   }
 
-  applySlow(amt, time) {
-    if (this.def.slowImmune || !this.alive) return;
-    this.slowAmt = Math.max(this.slowAmt, amt);
-    this.slowUntil = this.game.time + time;
+  // force: stuns and freezes work even on creatures that can't be slowed.
+  applySlow(amt, time, force = false) {
+    if ((this.def.slowImmune && !force) || !this.alive) return;
+    const now = this.game.time;
+    // A weaker slow never cuts short (or stretches) a stronger one.
+    if (now < this.slowUntil && amt < this.slowAmt) return;
+    if (force) {
+      // Stuns and freezes: a short breather afterwards so nothing gets stun-locked, bosses shrug most of it off.
+      if (now < (this.stunImmune || 0)) return;
+      if (this.def.boss) time *= 0.3;
+      this.stunImmune = now + time + 1.2;
+    }
+    this.slowAmt = amt;
+    this.slowUntil = now + time;
   }
 
   // quiet: continuous damage (beams) — no hit flash, and armour doesn't apply.
   takeDamage(amount, type, fort, quiet = false) {
     if (!this.alive || this.retreating || this.submerged) return;
-    const mult = this.def.resist[type] ?? 1;
+    const mult = (this.def.resist[type] ?? 1) * (this.game.mods.dmgType[type] || 1);
     let dmg = amount * mult;
+    if (fort && fort.weapon.bonusVs) dmg *= fort.weapon.bonusVs[this.key] || 1;
     if (this.def.armor && !quiet) dmg = Math.max(dmg * 0.25, dmg - this.def.armor);
+    // Shielded: the bubble soaks damage first. Zaps pop it three times as fast.
+    if (this.shield > 0) {
+      const pop = type === 'zap' ? 3 : 1;
+      const soak = Math.min(this.shield, dmg * pop);
+      this.shield -= soak;
+      dmg -= soak / pop;
+      if (this.shield <= 0) {
+        this.game.effects.burst(this.headPos(), 0x8fb8ff, 16, { speed: 5, up: 4, size: 0.14, life: 0.5 });
+        this.game.effects.float('POP!', this.headPos(), 'weak');
+        this.game.audio.play('pop');
+      }
+      this.sinceHit = 0;
+      if (dmg <= 0) {
+        if (!quiet) this.flash = 0.05;
+        return;
+      }
+    }
     this.hp -= dmg;
     this.sinceHit = 0;
     if (quiet) {
@@ -476,12 +559,24 @@ export class Golem {
     this.done = true;
     const fx = this.game.effects;
     const c = this.root.position.clone();
-    c.y += 1.3 * this.def.size;
-    fx.burst(c, this.def.color, this.def.boss ? 40 : 14, { speed: 5 * this.def.size, up: 6, size: 0.3 * this.def.size, life: 0.9 });
+    c.y += 1.3 * this.size;
+    fx.burst(c, this.def.color, this.def.boss ? 40 : 14, { speed: 5 * this.size, up: 6, size: 0.3 * this.size, life: 0.9 });
     fx.burst(c, this.def.glow, this.def.boss ? 20 : 6, { speed: 4, up: 7, size: 0.18, life: 0.7 });
     this.game.golemKilled(this, fort);
+    // Brood: bursts into little ones.
+    if (this.elite.includes('brood')) {
+      for (let i = 0; i < ELITES.brood.brood; i++) {
+        const off = (i - 1) * 0.9;
+        const g = this.game.spawnGolem(this.key, this.hpScale, this.rewardScale, this.rift, { mini: true });
+        g.onSpur = this.onSpur;
+        g.dist = Math.max(0, this.dist + off);
+        g.lateral = this.lateral + off * 0.6;
+        g.emerge = 1;
+        g.update(0);
+      }
+    }
     // Goop splits into gooplets.
-    if (this.def.split) {
+    if (this.def.split && !this.mini) {
       for (const off of [-0.8, 0.8]) {
         const g = this.game.spawnGolem(this.def.split, this.hpScale, this.rewardScale, this.rift);
         g.onSpur = this.onSpur;

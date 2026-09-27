@@ -68,9 +68,11 @@ export class Projectiles {
       speed: w.projSpeed,
       damage: st.damage,
       dmgType: w.dmgType,
-      splash: w.splash || 0,
+      splash: (w.splash || 0) * this.game.mods.splash,
       slow: w.slow || 0,
       slowTime: w.slowTime || 0,
+      hitSlow: w.hitSlow || 0,
+      freeze: w.freeze || 0,
       fort,
       t: 0,
       smoke: 0,
@@ -141,10 +143,11 @@ export class Projectiles {
         // Lobbed shots land on the ground: they can't splash fliers.
         if (p.arc && g.def.flying) continue;
         const d = Math.hypot(g.pos.x - at.x, g.pos.z - at.z);
-        const r = p.splash + g.def.size * 0.4;
+        const r = p.splash + g.size * 0.4;
         if (d <= r) {
           g.takeDamage(p.damage * (d < r * 0.4 ? 1 : 0.6), p.dmgType, p.fort);
           if (p.slow) g.applySlow(p.slow, p.slowTime);
+          if (p.freeze) g.applySlow(1, p.freeze, true);
         }
       }
       if (p.kind === 'balloon') {
@@ -164,6 +167,7 @@ export class Projectiles {
       }
     } else if (p.target && p.target.targetable) {
       p.target.takeDamage(p.damage, p.dmgType, p.fort);
+      if (p.hitSlow) p.target.applySlow(p.hitSlow, p.slowTime);
       fx.burst(at, p.kind === 'dart' ? 0xff8c1a : 0x9a8a76, p.kind === 'dart' ? 1 : 3, { speed: 2, up: 2, size: 0.1, life: 0.3 });
       game.audio.play('hit');
     }

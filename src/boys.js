@@ -196,7 +196,7 @@ export class Boy {
       const dx = t.x - p.x;
       const dz = t.z - p.z;
       const d = Math.hypot(dx, dz);
-      const step = this.speed * dt;
+      const step = this.speed * this.game.mods.run * dt;
       if (d <= step) {
         p.x = t.x;
         p.z = t.z;

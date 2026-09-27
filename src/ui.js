@@ -1,5 +1,6 @@
-import { WEAPONS, GOLEMS, FORT_LEVELS, WEAPON_LEVELS, TEAM_LEVEL, TEAM_BONUS, weaponUpgradeCost, MAX_BOYS, makeWave, summarizeWave, weekOf, DIFFICULTIES, STAGES } from './config.js';
+import { WEAPONS, GOLEMS, FORT_LEVELS, WEAPON_LEVELS, TEAM_LEVEL, TEAM_BONUS, makeWave, summarizeWave, summarizeElites, ELITES, SPECS, weekOf, DIFFICULTIES, STAGES } from './config.js';
 import { DETOURS } from './path.js';
+import { PERKS } from './perks.js';
 import { fetchScores, submitScore, lastName, boardHTML } from './leaderboard.js';
 
 const $ = (id) => document.getElementById(id);
@@ -64,7 +65,7 @@ export class UI {
         <span class="name">${w.name}</span>
         <span class="desc">${w.desc}</span>
         <span class="vs">${strong.length ? `<i class="good">Strong vs ${strong.join('')}</i>` : ''}${weak.length ? `<i class="bad">Weak vs ${weak.join('')}</i>` : ''}</span>
-        <span class="cost">⭐ ${w.cost}</span>
+        <span class="cost" id="cost-${w.key}">⭐ ${w.cost}</span>
       </button>`;
     });
     cards.push(`<button class="card trailcard" data-trail="1">
@@ -117,6 +118,7 @@ export class UI {
         case 'home': g.sendHome(f, g.boys.find((x) => x.id === +b.dataset.who)); break;
         case 'upFort': g.upgradeFort(f); break;
         case 'upWeapon': g.upgradeWeapon(f); break;
+        case 'spec': g.specialise(f, +b.dataset.i); break;
         case 'sell': g.sellFort(f); break;
         case 'target':
           f.targeting = b.dataset.t;
@@ -156,6 +158,16 @@ export class UI {
       g.chooseDifficulty(b.dataset.diff);
       this.renderDifficulty();
     });
+    $('perkCards').addEventListener('click', (ev) => {
+      const c = ev.target.closest('[data-perk]');
+      if (c) g.takePerk(c.dataset.perk);
+    });
+    $('perkStrip').addEventListener('click', () => {
+      for (const k of g.perks) {
+        const p = PERKS.find((x) => x.key === k);
+        this.toast(`${p.icon} ${p.name}: ${p.text}`);
+      }
+    });
     $('againBtn').addEventListener('click', () => location.reload());
     $('endlessBtn').addEventListener('click', () => g.continueEndless());
     $('scoreForm').addEventListener('submit', (ev) => {
@@ -179,18 +191,22 @@ export class UI {
     $('musicBtn').classList.toggle('off', !g.music.on);
     setText(e.pause, g.paused ? '▶' : '⏸');
 
-    const key = `${g.points}|${g.boys.length}|${g.recruits}|${g.detours.size}|${g.phase}`;
+    const key = `${g.points}|${g.boys.length}|${g.recruits}|${g.detours.size}|${g.phase}|${g.perks.length}`;
     if (key !== this.cardKey) {
       this.cardKey = key;
       for (const c of this.cards) {
-        if (c.dataset.build) c.classList.toggle('poor', g.points < WEAPONS[c.dataset.build].cost);
+        if (c.dataset.build) {
+          const cost = g.fortCost(c.dataset.build);
+          c.classList.toggle('poor', g.points < cost);
+          setText($(`cost-${c.dataset.build}`), `⭐ ${cost}`);
+        }
         else if (c.dataset.trail) {
           const done = g.detours.size >= DETOURS.length;
           c.classList.toggle('poor', done || g.phase !== 'morning' || g.points < g.detourCost());
           setText($('trailCost'), done ? 'All dug' : `⭐ ${g.detourCost()}`);
           if (this.trailOpen) this.updateTrail();
         } else {
-          const full = g.boys.length >= MAX_BOYS;
+          const full = g.boys.length >= g.maxBoys;
           c.classList.toggle('poor', full || g.points < g.recruitCost());
           setText($('recruitCost'), full ? 'Full crew' : `⭐ ${g.recruitCost()}`);
         }
@@ -252,8 +268,11 @@ export class UI {
       .filter(({ type }) => fresh.has(type) || GOLEMS[type].boss)
       .map(({ type }) => `<li><b>${fresh.has(type) ? 'NEW' : 'BOSS'}</b> ${GOLEMS[type].tip}</li>`)
       .join('');
+    const elites = summarizeElites(w)
+      .map(({ key, count }) => `<span class="chip el-elite" title="${ELITES[key].name}: ${ELITES[key].desc}">${ELITES[key].icon}<b>${count}</b></span>`)
+      .join('');
     const riftChip = w.rifts > 1 ? `<span class="chip el-rift" title="${w.rifts} rifts open">🌀<b>${w.rifts}</b></span>` : '';
-    this.e.waveInfo.innerHTML = `<div class="chips">${riftChip}${chips}</div>${tips ? `<ul class="tips">${tips}</ul>` : ''}`;
+    this.e.waveInfo.innerHTML = `<div class="chips">${riftChip}${chips}${elites}</div>${tips ? `<ul class="tips">${tips}</ul>` : ''}`;
   }
 
   // ---------- fort panel ----------
@@ -303,11 +322,15 @@ export class UI {
       </div>
       <div class="ups">
         ${next
-          ? `<button data-a="upFort" id="fp-upFort"><b>🔨 Build it up → ${next.name}</b><small>More range and damage · U</small><span class="cost">⭐ ${next.cost}</span></button>`
+          ? `<button data-a="upFort" id="fp-upFort"><b>🔨 Build it up → ${next.name}</b><small>More range and damage · U</small><span class="cost">⭐ ${g.fortUpCost(f)}</span></button>`
           : `<div class="maxed">🏆 Best fort on the street</div>`}
         ${f.wlevel < MAX_W
-          ? `<button data-a="upWeapon" id="fp-upW"><b>⚙️ Upgrade ${w.short} ${stars(f.wlevel + 1)}</b><small>Hits harder, fires faster · G</small><span class="cost">⭐ ${weaponUpgradeCost(w, f.wlevel)}</span></button>`
-          : `<div class="maxed">🏆 ${w.short} maxed out</div>`}
+          ? `<button data-a="upWeapon" id="fp-upW"><b>⚙️ Upgrade ${w.short} ${stars(f.wlevel + 1)}</b><small>Hits harder, fires faster · G</small><span class="cost">⭐ ${g.weaponUpCost(f)}</span></button>`
+          : f.spec
+            ? `<div class="maxed">🏆 ${w.icon} ${w.short}: ${w.desc}</div>`
+            : `<div class="spechead">🌟 All 5 stars! Pick a specialisation:</div>${(SPECS[f.base.key] || [])
+                .map((sp, i) => `<button data-a="spec" data-i="${i}" class="spec"><b>${sp.icon} ${sp.name}</b><small>${sp.desc}</small><span class="cost">⭐ ${g.specCost(f)}</span></button>`)
+                .join('')}`}
       </div>
       <div class="crewline" id="fp-crew"></div>
       ${crew}
@@ -347,12 +370,13 @@ export class UI {
     });
     setText($('fp-range'), st.range.toFixed(1));
     setText($('fp-dmg'), st.damage.toFixed(0));
-    setText($('fp-rate'), f.weapon.beam ? `${(1 + Math.min(f.beamT, 3) * 0.7).toFixed(1)}×` : st.rate.toFixed(2));
+    setText($('fp-rate'), f.weapon.beam ? `${(f.beamT ? f.heat || 1 : 1).toFixed(1)}×` : st.rate.toFixed(2));
     setText($('fp-kills'), f.kills);
     const up = $('fp-upFort');
-    if (up) up.classList.toggle('poor', g.points < FORT_LEVELS[f.level + 1].cost);
+    if (up) up.classList.toggle('poor', g.points < g.fortUpCost(f));
     const uw = $('fp-upW');
-    if (uw) uw.classList.toggle('poor', g.points < weaponUpgradeCost(f.weapon, f.wlevel));
+    if (uw) uw.classList.toggle('poor', g.points < g.weaponUpCost(f));
+    for (const b of this.e.panel.querySelectorAll('.spec')) b.classList.toggle('poor', g.points < g.specCost(f));
   }
 
   // ---------- roster ----------
@@ -388,6 +412,33 @@ export class UI {
   toggleRoster() {
     const on = document.body.classList.toggle('crew-min');
     try { localStorage.setItem('theSack.crewMin', on ? '1' : ''); } catch {}
+  }
+
+  // ---------- weekly picks ----------
+  showPerks(cards, week) {
+    const el = $('perkPick');
+    setText($('perkWeek'), `Week ${week}`);
+    $('perkCards').innerHTML = cards
+      .map((p, i) => `<button class="perk${p.twist ? ' twist' : ''}" data-perk="${p.key}">
+          <span class="key">${i + 1}</span>
+          <span class="picon">${p.icon}</span>
+          <b>${p.name}</b>
+          ${p.twist ? '<em>Twist</em>' : ''}
+          <small>${p.text}</small>
+        </button>`)
+      .join('');
+    el.classList.remove('hidden');
+  }
+
+  hidePerks() {
+    $('perkPick').classList.add('hidden');
+  }
+
+  renderPerks() {
+    const taken = this.g.perks.map((k) => PERKS.find((p) => p.key === k));
+    const el = $('perkStrip');
+    el.innerHTML = taken.map((p) => `<span title="${p.name}: ${p.text}">${p.icon}</span>`).join('');
+    el.classList.toggle('hidden', !taken.length);
   }
 
   // ---------- messages / overlays ----------

@@ -81,6 +81,9 @@ The game works with touch: drag to move, pinch to zoom, twist two fingers to rot
     *   Week 6 (day 36): a **fourth rift** opens down by the creek
     *   A 🌋 Magma Titan finishes every week (days 7, 14, 21…), with more of them as time goes on. Golem health and numbers keep climbing.
 *   **Rifts:** golems from a new rift walk its own trail and join the main trail partway along, skipping any forts before the junction. Dormant rifts glow faintly in the bush before they open. When one opens, it happens in the morning, so you get time to build near its trail.
+*   **Sunday night plans:** at the start of every week from week 2, pick 1 of 3 cards that lasts the rest of the holidays: cheaper forts, faster kids, a free cousin, +30% to one damage type, or a **twist** with an upside and a downside (Heatwave, Cold Snap, Storm Season, Buried Treasure, Big Sleepover). Picks show as icons in the day panel.
+*   **Tougher variants** (from week 5, day 29): some creatures turn up 🔺 Giant, 💨 Speedy, 🛡️ Shielded (a bubble soaks hits; zaps pop it 3× faster) or 🥚 Brood (bursts into 3 little ones). A coloured ring marks them. From about day 50 a few carry two.
+*   **Specialisations:** once a weapon has all 5 stars, pick one of two specialisations, e.g. Sniper Slingshot or Scatter Shot, Roman Candle or Big Bertha, Tesla Coil or EMP Blaster, Rock Salt Cannon (can hit sky lions) or Salt Storm.
 *   **Parents cause trouble**, more often each week:
     *   **Grounded** (from week 2): a kid stays home all day. You find out in the morning.
     *   **Late out** (from day 3): a kid has homework or a trip to Nan's first, and comes out mid-afternoon.
@@ -100,6 +103,7 @@ The game works with touch: drag to move, pinch to zoom, twist two fingers to rot
 | WASD / arrows | Move camera |
 | Q / E, right-drag | Rotate camera |
 | Scroll | Zoom |
+| 1–3 (Sunday night) | Pick a card |
 | F / P / M / N | Speed (up to 5×) / pause / mute / music |
 
 ## Code map
