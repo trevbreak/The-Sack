@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>The Sack</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Luckiest+Guy&family=Nunito:wght@600;800;900&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <canvas id="c"></canvas>
+    <div id="dmgFlash"></div>
+    <div id="nightFade"><div><small>The next morning…</small><b id="fadeDay">Day 2</b></div></div>
+    <div id="floaters"></div>
+
+    <div id="hud">
+      <div class="stat"><span class="ic">⭐</span><div><b id="points">0</b><small>points</small></div></div>
+      <div class="stat"><span class="ic">❤️</span><div><b id="hp">20</b><small>sack health</small></div></div>
+      <div class="stat"><span class="ic">☀️</span><div><b id="wave">1</b><small id="bestLbl">day of the hols</small></div></div>
+      <div class="stat"><span class="ic">👦</span><div><b id="boys">0/0</b><small>free / crew</small></div></div>
+      <div class="btns">
+        <button id="speedBtn" class="iconbtn" title="Game speed (F)">1×</button>
+        <button id="pauseBtn" class="iconbtn" title="Pause (P)">⏸</button>
+        <button id="muteBtn" class="iconbtn" title="Sound (M)">🔊</button>
+      </div>
+    </div>
+
+    <div id="roster" class="panel">
+      <h4>The Crew</h4>
+      <div id="rosterList"></div>
+      <p class="note">Click a boy to find his fort. With a fort selected, click a boy to send him there.</p>
+    </div>
+
+    <div id="rightCol">
+    <div id="wavePanel" class="panel">
+      <h4 id="waveTitle">Next up</h4>
+      <div class="daybar"><div id="dayFill"></div><span class="t1">🎒 3:30</span><b id="clock">3:30pm</b><span class="t2">🍝 6:00</span></div>
+      <div id="waveInfo"></div>
+      <button id="waveBtn">▶ Start Wave 1</button>
+    </div>
+
+    <div id="fortPanel" class="panel hidden"></div>
+    <div id="trailPanel" class="panel hidden"></div>
+    </div>
+
+    <div id="toasts"></div>
+    <div id="hint" class="hidden"></div>
+    <div id="buildbar"></div>
+
+    <div id="title" class="overlay">
+      <div class="titlecard">
+        <div class="kicker">A cul-de-sac fort defence game</div>
+        <h1>The Sack</h1>
+        <p class="story">
+          Out the back of Wattle Court, past the Colorbond fences, runs the fire trail. It's where the boys go to build forts.
+          These summer holidays something's crawling out of the bush: <b>elemental golems</b> made of fire, ice, stone and storm.
+          The day the golems take the sack, the holidays are over and it's <b>back to school</b>. Make them last as long as you can.
+        </p>
+        <div class="how">
+          <div><span>🏗️</span><p><b>Build forts</b> along the fire trail. Each one comes with a weapon.</p></div>
+          <div><span>👦</span><p><b>Man them.</b> A fort only fires with a boy in it. Bigger forts fit two, and they work as a team.</p></div>
+          <div><span>⭐</span><p><b>Smash golems</b> for points. Spend them on upgrades and new recruits.</p></div>
+          <div><span>🔥</span><p><b>Match elements.</b> Water beats fire, fireworks melt ice, rocks ground storms.</p></div>
+          <div><span>🍝</span><p><b>Every wave is one afternoon.</b> Once the last creature is dealt with, the parents yell everyone in for dinner.</p></div>
+          <div><span>⛏️</span><p><b>Dig the trail longer</b> with Trail Works. Golems have to walk further, past more forts.</p></div>
+          <div><span>🌀</span><p><b>Every week gets harder.</b> New golems, new rifts in the bush, and parents who keep kids home.</p></div>
+          <div><span>😠</span><p><b>Parents.</b> Kids get grounded, kept in late, or called home for chores. Plan for a missing kid.</p></div>
+        </div>
+        <div class="diffpick">
+          <div class="diffs" id="diffs"></div>
+          <div class="diffdesc" id="diffDesc"></div>
+        </div>
+        <button id="playBtn">Let's go!</button>
+        <div class="controls">
+          <span><kbd>1</kbd>–<kbd>7</kbd> build</span>
+          <span><kbd>R</kbd> recruit</span>
+          <span><kbd>T</kbd> trail works</span>
+          <span><kbd>Space</kbd> head out</span>
+          <span><kbd>WASD</kbd> move</span>
+          <span><kbd>Q</kbd>/<kbd>E</kbd> or right-drag to rotate</span>
+          <span>scroll to zoom</span>
+          <span><kbd>F</kbd> speed</span>
+          <span><kbd>P</kbd> pause</span>
+        </div>
+      </div>
+    </div>
+
+    <div id="end" class="overlay hidden">
+      <div class="titlecard">
+        <h1 id="endTitle"></h1>
+        <p class="story" id="endText"></p>
+        <div id="endStats" class="endstats"></div>
+        <div class="endbtns">
+          <button id="endlessBtn" class="ghostbtn">Keep going (endless)</button>
+          <button id="againBtn">Play again</button>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
