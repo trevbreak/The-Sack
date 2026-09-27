@@ -1,4 +1,4 @@
-import { WEAPONS, GOLEMS, FORT_LEVELS, WEAPON_LEVELS, TEAM_LEVEL, TEAM_BONUS, makeWave, summarizeWave, summarizeElites, ELITES, SPECS, weekOf, DIFFICULTIES, STAGES } from './config.js';
+import { WEAPONS, GOLEMS, FORT_LEVELS, WEAPON_LEVELS, TEAM_LEVEL, TEAM_BONUS, makeWave, summarizeWave, summarizeElites, ELITES, SPECS, weekOf, DIFFICULTIES, STAGES, holidayOf, holidayLabel } from './config.js';
 import { DETOURS } from './path.js';
 import { PERKS } from './perks.js';
 import { fetchScores, submitScore, lastName, boardHTML } from './leaderboard.js';
@@ -163,6 +163,8 @@ export class UI {
       const c = ev.target.closest('[data-perk]');
       if (c) g.takePerk(c.dataset.perk);
     });
+    $('holNext').addEventListener('click', () => g.toTerm());
+    $('termSkip').addEventListener('click', () => g.endTerm());
     $('nightOpts').addEventListener('click', (ev) => {
       const b = ev.target.closest('[data-opt]');
       if (b) g.resolveNight(+b.dataset.opt);
@@ -261,14 +263,15 @@ export class UI {
   setWavePreview() {
     const g = this.g;
     const n = g.phase === 'morning' ? g.wave + 1 : g.wave;
-    const w = makeWave(n);
+    const w = g.waveFor(n);
     const sum = summarizeWave(w);
-    setText(this.e.waveTitle, `${g.phase === 'morning' ? 'This arvo · ' : ''}Day ${n} · Week ${weekOf(n)}`);
+    const hol = holidayOf(n);
+    setText(this.e.waveTitle, `${hol.icon} ${hol.short} · Day ${hol.dayIn} of ${hol.len}${hol.dayIn === hol.len ? ' · LAST DAY' : ''}`);
     const chips = sum
       .map(({ type, count }) => `<span class="chip el-${type}" title="${GOLEMS[type].name}">${GOLEMS[type].icon}<b>${count}</b></span>`)
       .join('');
     // Only explain creatures that are new (arrived in the last few days) or the boss.
-    const fresh = new Set(STAGES.filter((s) => s.golem && s.day <= n && n - s.day < 3).map((s) => s.golem));
+    const fresh = g.phase === 'morning' || g.phase === 'day' ? g.newToday || new Set() : new Set();
     const tips = sum
       .filter(({ type }) => fresh.has(type) || GOLEMS[type].boss)
       .map(({ type }) => `<li><b>${fresh.has(type) ? 'NEW' : 'BOSS'}</b> ${GOLEMS[type].tip}</li>`)
@@ -430,7 +433,7 @@ export class UI {
   // ---------- weekly picks ----------
   showPerks(cards, week) {
     const el = $('perkPick');
-    setText($('perkWeek'), `Week ${week}`);
+    setText($('perkWeek'), week);
     $('perkCards').innerHTML = cards
       .map((p, i) => `<button class="perk${p.twist ? ' twist' : ''}" data-perk="${p.key}">
           <span class="key">${i + 1}</span>
@@ -452,6 +455,36 @@ export class UI {
     const el = $('perkStrip');
     el.innerHTML = taken.map((p) => `<span title="${p.name}: ${p.text}">${p.icon}</span>`).join('');
     el.classList.toggle('hidden', !taken.length);
+  }
+
+  // ---------- end of the holidays / term time ----------
+  showHolidayEnd(h, st) {
+    const next = holidayOf(h.last + 1);
+    $('holTitle').textContent = `${h.icon} ${h.name}: done!`;
+    $('holText').textContent = h.key === 'christmas'
+      ? `That's the whole school year${h.year > 1 ? ` (Year ${h.year})` : ''}. Back to school for a new year… and the ${next.name} are only a term away.`
+      : `You held Wattle Court for the whole ${h.short.toLowerCase()} holidays. Now it's back to school for a term. Next up: the ${next.name}.`;
+    $('holStats').innerHTML = `
+      <div><b>${h.len}</b><span>days held</span></div>
+      <div><b>${st.kills}</b><span>creatures smashed</span></div>
+      <div><b>${st.leaked}</b><span>got into the sack</span></div>
+      <div><b>${this.g.boys.length}</b><span>kids in the crew</span></div>`;
+    $('holidayEnd').classList.remove('hidden');
+  }
+
+  hideHolidayEnd() {
+    $('holidayEnd').classList.add('hidden');
+  }
+
+  showTerm(report, next) {
+    $('termList').innerHTML = report.map((r) => `<li>${r}</li>`).join('');
+    $('termSkip').textContent = `${next.icon} Start the ${next.name}!`;
+    $('termNext').textContent = `${next.weeks} weeks. The sack's all fixed up. It starts easier than it ended, but it builds up faster.`;
+    $('term').classList.remove('hidden');
+  }
+
+  hideTerm() {
+    $('term').classList.add('hidden');
   }
 
   // ---------- tonight on Wattle Court ----------
@@ -496,9 +529,10 @@ export class UI {
     const g = this.g;
     const record = g.wave >= g.best;
     $('endTitle').textContent = 'Back to School!';
-    $('endText').textContent = `The golems took over Wattle Court on day ${g.wave}. The holidays are over, and it's back to school.${record ? ' Longest holidays ever!' : ''}`;
+    const h = holidayOf(g.wave);
+    $('endText').textContent = `The golems took over Wattle Court on day ${h.dayIn} of the ${h.year > 1 ? `Year ${h.year} ` : ''}${h.name}. It's back to school early.${record ? ' Longest run ever!' : ''}`;
     $('endStats').innerHTML = `
-      <div><b>${g.wave}</b><span>days of holidays</span></div>
+      <div><b>${g.wave}</b><span>days of holidays (${holidayLabel(g.wave)})</span></div>
       <div><b>${g.best}</b><span>best on ${g.diff.name}</span></div>
       <div><b>${g.stats.kills}</b><span>golems smashed</span></div>
       <div><b>${g.boys.length}</b><span>boys in the crew</span></div>`;
@@ -601,7 +635,10 @@ export class UI {
   }
 
   night(on, nextDay) {
-    if (on) setText($('fadeDay'), `Day ${nextDay}`);
+    if (on) {
+      const h = holidayOf(nextDay);
+      setText($('fadeDay'), `${h.short} · Day ${h.dayIn}`);
+    }
     this.e.fade.classList.toggle('on', on);
   }
 
