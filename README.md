@@ -2,12 +2,48 @@
 
 A 3D fort-defence game. A crew of boys on a suburban cul-de-sac (Wattle Court) build forts along the fire trail behind their houses to hold off waves of elemental golems coming out of the bush.
 
-## Run it
+## Run it on your computer
 
-```
+Needs [Node.js](https://nodejs.org) 18 or newer.
+
+```bash
 npm install
-npm run dev      # then open http://localhost:5173
+npm run dev       # open http://localhost:5173
 ```
+
+The dev server also listens on your home network, so other computers, phones and tablets in the house can play at `http://<your-computer's-IP>:5173` (Vite prints the address when it starts).
+
+To run the production build instead (what the Docker image runs):
+
+```bash
+npm run serve     # builds, then serves on http://localhost:8080
+```
+
+## Run it on the Unraid server (Docker)
+
+Every push to `main` builds a Docker image and publishes it to `ghcr.io/trevbreak/the-sack:latest` (see the **Actions** tab). The image is a tiny Node server: it serves the game and keeps the household leaderboard in `/data/scores.json`.
+
+**One-time setup:** the repo is private, so the image is too. Either:
+- make the image public (GitHub → your profile → **Packages** → **the-sack** → **Package settings** → **Change visibility** → Public). The code stays private; only the built game is public. Or
+- log Unraid in to GitHub's registry: in the Unraid terminal run `docker login ghcr.io -u trevbreak` and paste a [personal access token](https://github.com/settings/tokens) with the `read:packages` scope.
+
+**Add the container (Unraid template):**
+1. Copy `unraid/the-sack.xml` to `/boot/config/plugins/dockerMan/templates-user/my-the-sack.xml` on the server (e.g. through the `flash` share).
+2. In Unraid: **Docker → Add Container → Template → the-sack**.
+3. Check the port (8080) and the leaderboard folder (`/mnt/user/appdata/the-sack`), then **Apply**.
+4. Play at `http://<unraid-ip>:8080` from any computer, phone or tablet in the house.
+
+To update to the latest version: **Docker → the-sack → Force update**. The leaderboard lives in appdata, so it's kept.
+
+**Or with Docker Compose** (any Docker host): `docker compose up -d`, then open port 8080. Use `docker compose up -d --build` to build from source instead of pulling.
+
+## Household leaderboard
+
+When the golems take the sack, type your name to save your run. Scores are kept on the server, so every computer in the house shares one leaderboard, one board per difficulty, ranked by days survived. The title screen shows the top 5 for the difficulty you've picked. If the server can't be reached, scores are saved in that browser instead.
+
+## Phones and tablets
+
+The game works with touch: drag to move, pinch to zoom, twist two fingers to rotate. Tap a fort card, then tap the map once to preview and again to build. Tap a fort to open it. On a phone you can use **Add to Home Screen** to play it full-screen like an app.
 
 ## How it plays
 

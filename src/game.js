@@ -117,7 +117,10 @@ export class Game {
   // ---------- setup ----------
   initRenderer() {
     const r = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: true });
-    r.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    // Phones and tablets: a little less resolution and shadow detail to stay smooth.
+    this.touch = window.matchMedia('(pointer: coarse)').matches;
+    document.body.classList.toggle('touch', this.touch);
+    r.setPixelRatio(Math.min(window.devicePixelRatio, this.touch ? 1.5 : 2));
     r.setSize(window.innerWidth, window.innerHeight);
     r.shadowMap.enabled = true;
     r.shadowMap.type = THREE.PCFShadowMap;
@@ -152,7 +155,7 @@ export class Game {
     sun.position.set(-60, 95, 45);
     sun.target.position.set(0, 0, -10);
     sun.castShadow = true;
-    sun.shadow.mapSize.set(4096, 4096);
+    sun.shadow.mapSize.setScalar(this.touch ? 2048 : 4096);
     const s = sun.shadow.camera;
     s.left = -110;
     s.right = 110;
@@ -262,6 +265,7 @@ export class Game {
 
   cancelBuild() {
     this.buildKey = null;
+    this.pendingSpot = null;
     this.ghost.visible = false;
     this.ui.updateBuildActive();
   }
@@ -382,7 +386,7 @@ export class Game {
     this.ui.setWavePreview();
     this.audio.ensure();
     this.ui.hideTitle();
-    this.ui.toast('Pick a fort (1–7) and build it in the bush along the fire trail!');
+    this.ui.toast(this.touch ? 'Tap a fort card, then build it in the bush along the fire trail!' : 'Pick a fort (1–7) and build it in the bush along the fire trail!');
   }
 
   // ---------- the day loop ----------
@@ -772,7 +776,7 @@ export class Game {
       if (!d || Math.hypot(e.clientX - d.x, e.clientY - d.y) > 6) return;
       this.mouse.set((e.clientX / window.innerWidth) * 2 - 1, -(e.clientY / window.innerHeight) * 2 + 1);
       this.updatePointer();
-      if (d.b === 0) this.handleClick(e.shiftKey);
+      if (d.b === 0) this.handleClick(e.shiftKey, e.pointerType);
       else if (d.b === 2) {
         if (this.buildKey) this.cancelBuild();
         else this.select(null);
@@ -782,6 +786,8 @@ export class Game {
     document.addEventListener('pointerdown', () => this.audio.ensure());
 
     window.addEventListener('keydown', (e) => {
+      // Typing a name on the leaderboard shouldn't recruit kids or mute the game.
+      if (e.target instanceof HTMLInputElement) return;
       const k = e.key.toLowerCase();
       if (!this.started) {
         if (k === 'enter' || k === ' ') {
@@ -820,12 +826,24 @@ export class Game {
     });
   }
 
-  handleClick(shift) {
+  handleClick(shift, pointerType = 'mouse') {
     if (this.over) return;
     if (this.buildKey) {
       if (!this.groundOk) return;
       const w = WEAPONS[this.buildKey];
       const reason = this.placeReason(this.ground.x, this.ground.z);
+      // On touch there's no hover preview, so the first tap shows the fort
+      // and a second tap on the same spot builds it.
+      if (pointerType === 'touch') {
+        const p = this.pendingSpot;
+        if (!p || Math.hypot(p.x - this.ground.x, p.z - this.ground.z) > 2.5) {
+          this.pendingSpot = this.ground.clone();
+          if (reason) return this.fail(reason);
+          this.audio.play('click');
+          return this.ui.toast('Tap again to build here');
+        }
+        this.pendingSpot = null;
+      }
       if (reason) return this.fail(reason);
       if (this.points < w.cost) return this.fail(`Need ⭐${w.cost}`);
       this.placeFort(this.ground.x, this.ground.z, this.buildKey, shift);

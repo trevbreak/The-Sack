@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<!--
+  Unraid template for The Sack.
+  Copy this file to /boot/config/plugins/dockerMan/templates-user/my-the-sack.xml
+  then in Unraid: Docker > Add Container > Template: the-sack.
+-->
+<Container version="2">
+  <Name>the-sack</Name>
+  <Repository>ghcr.io/trevbreak/the-sack:latest</Repository>
+  <Registry>https://github.com/trevbreak/The-Sack/pkgs/container/the-sack</Registry>
+  <Network>bridge</Network>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/trevbreak/The-Sack</Support>
+  <Project>https://github.com/trevbreak/The-Sack</Project>
+  <Overview>The Sack: a cul-de-sac fort defence game. Kids build forts on the fire trail to hold off golems, sky lions and drop bears until the parents call them in for dinner. Includes a household leaderboard.</Overview>
+  <Category>GameServers:</Category>
+  <WebUI>http://[IP]:[PORT:8080]/</WebUI>
+  <Config Name="Web port" Target="8080" Default="8080" Mode="tcp" Description="Port the game is served on. Open http://your-server:PORT in a browser." Type="Port" Display="always" Required="true" Mask="false">8080</Config>
+  <Config Name="Leaderboard data" Target="/data" Default="/mnt/user/appdata/the-sack" Mode="rw" Description="Where the household leaderboard (scores.json) is saved." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/the-sack</Config>
+</Container>

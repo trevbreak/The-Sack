@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="112" fill="#1b1a22"/>
+  <circle cx="256" cy="300" r="150" fill="#3d4046"/>
+  <circle cx="256" cy="300" r="150" fill="none" stroke="#cfc9bc" stroke-width="22"/>
+  <rect x="226" y="330" width="60" height="182" fill="#3d4046"/>
+  <path d="M150 190 L256 110 L362 190 Z" fill="#d8342c"/>
+  <rect x="176" y="190" width="160" height="110" fill="#f1e3c8"/>
+  <rect x="236" y="232" width="40" height="68" fill="#8b2d2d"/>
+  <text x="256" y="88" font-family="Arial Black, Arial, sans-serif" font-size="72" font-weight="900" fill="#ffcc33" text-anchor="middle">SACK</text>
+</svg>
