@@ -116,6 +116,7 @@ export class UI {
       switch (b.dataset.a) {
         case 'close': g.select(null); break;
         case 'home': g.sendHome(f, g.boys.find((x) => x.id === +b.dataset.who)); break;
+        case 'callback': g.callBack(g.boys.find((x) => x.id === +b.dataset.who)); this.renderPanel(); break;
         case 'upFort': g.upgradeFort(f); break;
         case 'upWeapon': g.upgradeWeapon(f); break;
         case 'spec': g.specialise(f, +b.dataset.i); break;
@@ -161,6 +162,10 @@ export class UI {
     $('perkCards').addEventListener('click', (ev) => {
       const c = ev.target.closest('[data-perk]');
       if (c) g.takePerk(c.dataset.perk);
+    });
+    $('nightOpts').addEventListener('click', (ev) => {
+      const b = ev.target.closest('[data-opt]');
+      if (b) g.resolveNight(+b.dataset.opt);
     });
     $('perkStrip').addEventListener('click', () => {
       for (const k of g.perks) {
@@ -304,10 +309,10 @@ export class UI {
         ? `<button class="small boybtn" disabled title="${b.name}: ${away[b.away]}"><span class="dot" style="background:${b.shirtCss}"></span><span><b>${b.name}</b><em>${away[b.away]}</em></span></button>`
         : `<button class="small boybtn" data-boy="${b.id}" title="${verb} ${b.name} (${extra})"><span class="dot" style="background:${b.shirtCss}"></span><span><b>${b.name}</b><em>${extra}</em></span></button>`;
     let crew = f.crew
-      .map((b, i) => `<div class="crewmate"><span class="dot" style="background:${b.shirtCss}"></span><div><b>${b.name}</b> <em>${b.trait.name}</em><small id="fp-cm-${i}"></small></div><button class="x" data-a="home" data-who="${b.id}" title="Send ${b.name} back to the sack">✕</button></div>`)
+      .map((b, i) => `<div class="crewmate"><span class="dot" style="background:${b.shirtCss}"></span><div><b>${b.name}</b> <em title="${b.trait.desc}">${b.trait.icon} ${b.trait.name}</em><small id="fp-cm-${i}"></small><div class="boredbar"><i id="fp-bb-${i}"></i></div></div>${b.drifting ? `<button class="small ice" data-a="callback" data-who="${b.id}" title="Bribe ${b.name} back with an icy pole">🍦 ⭐${g.iceCost()}</button>` : ''}<button class="x" data-a="home" data-who="${b.id}" title="Send ${b.name} back to the sack">✕</button></div>`)
       .join('');
     if (f.crew.length < f.maxCrew) {
-      const pool = freeBoys.length ? freeBoys.map((b) => boyBtn(b, 'Send', b.trait.name)) : others.filter((b) => !f.crew.includes(b)).map((b) => boyBtn(b, 'Move', `from ${b.fort.weapon.short}`));
+      const pool = freeBoys.length ? freeBoys.map((b) => boyBtn(b, 'Send', `${b.trait.icon} ${b.trait.name}`)) : others.filter((b) => !f.crew.includes(b)).map((b) => boyBtn(b, 'Move', `from ${b.fort.weapon.short}`));
       if (f.crew.length) crew += `<div class="teamnote">🤝 Room for one more: a team gets ${pct(TEAM_BONUS.rate)} fire rate and ${pct(TEAM_BONUS.dmg)} damage.</div>`;
       if (!freeBoys.length) crew += `<div class="warn">No free boys. Recruit one (<b>R</b>)${pool.length ? ' or pull one from another fort:' : '.'}</div>`;
       if (pool.length) crew += `${freeBoys.length ? '<div class="sendhead">Send a kid:</div>' : ''}<div class="sendlist">${pool.join('')}</div>`;
@@ -363,10 +368,16 @@ export class UI {
       if (b.away === 'grounded') t = '😠 Grounded today';
       else if (b.away === 'late') t = '⏰ Not allowed out till later';
       else if (b.onChore) t = '🧹 Called in for chores';
+      else if (b.drifting) t = `${b.drifting.label} (back in ${Math.ceil(b.driftT)}s)`;
       else if (b.task === 'bed' || b.asleep) t = '🍝 Home for dinner';
-      else if (b.state === 'manning' && b.fort === f) t = `✅ On the job · ${b.trait.desc}`;
+      else if (b.state === 'manning' && b.fort === f) t = b.bored > 0.7 ? '🥱 Sooo bored. Move him somewhere busier?' : g.banned === f.base.key ? '🚫 Mum confiscated it for today' : b.tired ? '😪 Tired from the sleepover' : '✅ On the job';
       else t = '🏃 Running over…';
       setText($(`fp-cm-${i}`), t);
+      const bb = $(`fp-bb-${i}`);
+      if (bb) {
+        bb.style.width = `${Math.round(Math.min(1, b.bored) * 100)}%`;
+        bb.parentNode.classList.toggle('hot', b.bored > 0.7);
+      }
     });
     setText($('fp-range'), st.range.toFixed(1));
     setText($('fp-dmg'), st.damage.toFixed(0));
@@ -385,7 +396,7 @@ export class UI {
     this.e.roster.innerHTML = this.g.boys
       .map(
         (b) => `<div class="boy" data-boy="${b.id}" title="${b.name} · ${b.trait.name}: ${b.trait.desc}">
-          <span class="dot" style="background:${b.shirtCss}"></span><b>${b.name}</b><small id="bs-${b.id}"></small>
+          <span class="dot" style="background:${b.shirtCss}"></span><b>${b.name}</b><i class="ptrait">${b.trait.icon}</i><small id="bs-${b.id}"></small>
         </div>`,
       )
       .join('');
@@ -400,6 +411,8 @@ export class UI {
       else if (b.away === 'late') s = '⏰ Out later';
       else if (b.state === 'asleep' || b.task === 'bed') s = '🍝 Dinner';
       else if (b.onChore) s = b.state === 'inside' ? `🧹 Chores ${Math.ceil(b.choreT)}s` : '🧹 Chores';
+      else if (b.drifting) s = b.drifting.label;
+      else if (b.state === 'manning' && b.bored > 0.7) s = '🥱 Bored';
       else if (b.fort) s = b.state === 'manning' ? `${b.fort.weapon.icon} ${b.fort.weapon.short}` : `🏃 ${b.fort.weapon.short}`;
       else s = '🙂 Free';
       if (b.fort) busy++;
@@ -439,6 +452,20 @@ export class UI {
     const el = $('perkStrip');
     el.innerHTML = taken.map((p) => `<span title="${p.name}: ${p.text}">${p.icon}</span>`).join('');
     el.classList.toggle('hidden', !taken.length);
+  }
+
+  // ---------- tonight on Wattle Court ----------
+  showNightEvent(ev) {
+    $('nightIcon').textContent = ev.icon;
+    $('nightText').textContent = ev.text;
+    $('nightOpts').innerHTML = ev.options
+      .map((o, i) => `<button data-opt="${i}" class="${o.cost && this.g.points < o.cost ? 'poor' : ''}"><span class="okey">${i + 1}</span><span class="olabel">${o.label}</span>${o.cost ? ` <span class="cost">⭐ ${o.cost}</span>` : ''}</button>`)
+      .join('');
+    $('nightEvent').classList.remove('hidden');
+  }
+
+  hideNightEvent() {
+    $('nightEvent').classList.add('hidden');
   }
 
   // ---------- messages / overlays ----------

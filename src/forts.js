@@ -319,7 +319,7 @@ function labels() {
       depthTest: false,
       transparent: true,
     });
-  LABELS = { noBoy: make('NEEDS A BOY', '#d8342c'), onWay: make('ON THE WAY…', '#e08a1a'), chores: make('DOING CHORES', '#7a5cd6'), home: make('STUCK AT HOME', '#8a5a2b'), scared: make('SCARED STIFF!', '#b8327a') };
+  LABELS = { noBoy: make('NEEDS A BOY', '#d8342c'), onWay: make('ON THE WAY…', '#e08a1a'), chores: make('DOING CHORES', '#7a5cd6'), home: make('STUCK AT HOME', '#8a5a2b'), scared: make('SCARED STIFF!', '#b8327a'), goof: make('GOOFING OFF', '#2e9c6a'), banned: make('CONFISCATED', '#555060') };
   return LABELS;
 }
 
@@ -437,7 +437,15 @@ export class Fort {
       range *= b.trait.range || 1;
       damage *= b.trait.dmg || 1;
       rate *= b.trait.rate || 1;
+      if (b.tired) rate *= 0.8;
+      // Show-offs try harder with another fort close enough to watch.
+      if (b.trait.showoff && this.game.forts.some((f) => f !== this && f.manned && f.pos.distanceToSquared(this.pos) < 12 * 12)) rate *= b.trait.showoff;
     }
+    // A bossy kid on this fort or one nearby barks orders: +10% damage (doesn't stack).
+    if (this.game.forts.some((f) => f.pos.distanceToSquared(this.pos) < 12 * 12 && f.mannedCrew.some((b) => b.trait.aura))) damage *= 1.1;
+    const day = this.game.dayMods;
+    damage *= day.dmg;
+    rate *= day.rate;
     const team = on.length >= 2;
     if (team) {
       damage *= TEAM_BONUS.dmg;
@@ -516,11 +524,12 @@ export class Fort {
 
     const manned = this.manned;
     const night = this.game.phase === 'dusk' || this.game.phase === 'night';
-    this.indicator.visible = !manned && !night;
-    if (!manned) {
+    const banned = this.game.banned === this.base.key;
+    this.indicator.visible = (!manned || banned) && !night;
+    if (!manned || banned) {
       const L = labels();
       const c = this.crew;
-      this.indicator.material = !c.length ? L.noBoy : c.every((b) => b.away) ? L.home : c.every((b) => b.onChore || b.away) ? L.chores : L.onWay;
+      this.indicator.material = banned && c.length ? L.banned : !c.length ? L.noBoy : c.every((b) => b.away) ? L.home : c.some((b) => b.drifting) && c.every((b) => b.drifting || b.onChore || b.away) ? L.goof : c.every((b) => b.onChore || b.away) ? L.chores : L.onWay;
       this.indicator.position.y = this.height + 2.4 + Math.sin(performance.now() * 0.005) * 0.15;
       this.stopBeam();
       return;
@@ -546,7 +555,10 @@ export class Fort {
   }
 
   scare(time) {
+    time *= Math.max(1, ...this.mannedCrew.map((b) => b.trait.scare || 1));
     this.scaredUntil = this.game.time + time;
+    const kid = this.mannedCrew[0];
+    if (kid) this.game.chatter.say(kid, 'scared', {}, { force: true });
     const p = this.pos.clone().setY(this.height + 1.5);
     this.game.effects.float('DROP BEAR!', p, 'big');
     this.game.effects.burst(p, 0x8e8f94, 14, { speed: 4, up: 5, size: 0.2 });
@@ -565,6 +577,8 @@ export class Fort {
       this.beamT = 0;
     }
     this.beamT += dt;
+    this.lastAction = this.game.time;
+    if (Math.random() < dt * 0.25) this.game.chatter.sfx(this);
     const w = this.weapon;
     const heat = 1 + Math.min(this.beamT, w.heatTime || 3) * (w.heatRate || 0.7); // normally up to 3.1× after 3 seconds
     this.heat = heat;
@@ -599,6 +613,9 @@ export class Fort {
   fire(target, st) {
     this.cooldown = 1 / st.rate;
     this.kick = 1;
+    this.lastAction = this.game.time;
+    // Every so often the kids do the sound effects themselves.
+    if (Math.random() < Math.min(0.12, 0.25 / st.rate)) this.game.chatter.sfx(this);
     const from = this.muzzleWorld();
     if (this.weapon.chain) this.zap(target, st, from);
     else {

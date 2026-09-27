@@ -175,12 +175,21 @@ export const FORT_LEVELS = [
 export const TEAM_LEVEL = 1; // Pallet Fort and up fit a second kid
 export const TEAM_BONUS = { rate: 1.5, dmg: 1.25 };
 
+// Personalities. range/rate/dmg multiply the fort; bored = how fast they get bored;
+// trouble = how often parents keep them home; run = walking speed; scare = drop-bear fright time.
 export const TRAITS = [
-  { key: 'arm', name: 'Good Arm', desc: '+15% range', range: 1.15, weight: 3 },
-  { key: 'quick', name: 'Quick Hands', desc: '+20% fire rate', rate: 1.2, weight: 3 },
-  { key: 'eye', name: 'Eagle Eye', desc: '+20% damage', dmg: 1.2, weight: 3 },
-  { key: 'brave', name: 'Fearless', desc: '+10% everything', range: 1.1, rate: 1.1, dmg: 1.1, weight: 1 },
+  { key: 'dreamer', icon: '🌈', name: 'Dreamer', desc: '+25% damage, but gets bored fast', dmg: 1.25, bored: 1.7, weight: 2 },
+  { key: 'focused', icon: '🎯', name: 'Focused', desc: '+15% damage, hardly ever gets bored', dmg: 1.15, bored: 0.4, weight: 2 },
+  { key: 'sporty', icon: '⚡', name: 'Sporty', desc: '+20% fire rate, runs faster', rate: 1.2, run: 1.35, weight: 3 },
+  { key: 'bigarm', icon: '💪', name: 'Big Arm', desc: '+15% range', range: 1.15, weight: 3 },
+  { key: 'showoff', icon: '😎', name: 'Show-off', desc: '+25% fire rate with another fort close by to watch', showoff: 1.25, weight: 2 },
+  { key: 'bossy', icon: '📣', name: 'Bossy', desc: 'Forts nearby do +10% damage. Bored if nothing\'s happening', aura: 1.1, bored: 1.3, weight: 1.5 },
+  { key: 'goody', icon: '😇', name: 'Goody-two-shoes', desc: 'Never gets in trouble', trouble: 0, weight: 1.5 },
+  { key: 'ratbag', icon: '😈', name: 'Ratbag', desc: '+20% damage and fire rate, always in trouble', dmg: 1.2, rate: 1.2, trouble: 2.5, weight: 1.5 },
+  { key: 'scaredy', icon: '😱', name: 'Scaredy-cat', desc: '+20% range, but drop bears scare him twice as long', range: 1.2, scare: 2, weight: 1.5 },
 ];
+// Tag-along little siblings from the dinner table.
+export const LITTLE = { key: 'little', icon: '🧸', name: 'Little Sibling', desc: 'Only here for today. Tries hard, bored fast', dmg: 0.6, bored: 2, weight: 0 };
 
 // The main crew, in the order they join: AJ and Kai start the game, Jimmy is the
 // first recruit. Everyone after that gets a random name from BOY_NAMES.
