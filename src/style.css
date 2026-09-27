@@ -739,3 +739,111 @@ body.touch .perk .key { display: none; }
   .perk small { flex-basis: 100%; }
   .perk .key { display: none; }
 }
+
+/* ---------- kids talking ---------- */
+.kidbubble {
+  position: absolute;
+  left: 0;
+  top: 0;
+  max-width: 190px;
+  padding: 5px 10px 6px;
+  border-radius: 14px 14px 14px 4px;
+  background: #fffdf5;
+  color: #2a1a10;
+  border: 2.5px solid var(--kid, #333);
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.2;
+  text-align: left;
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.22);
+  transform-origin: 50% 100%;
+  animation: kidPop 0.32s cubic-bezier(0.3, 1.8, 0.5, 1) both, kidBob 1.4s ease-in-out 0.32s infinite alternate;
+  will-change: transform;
+}
+.kidbubble b {
+  display: block;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--kid, #333);
+  filter: brightness(0.8);
+  margin-bottom: 1px;
+}
+.kidbubble::after {
+  content: '';
+  position: absolute;
+  left: 14px;
+  bottom: -9px;
+  border: 7px solid transparent;
+  border-left-color: var(--kid, #333);
+  border-top-color: var(--kid, #333);
+}
+.kidbubble.window { border-style: dashed; background: #fff6d8; font-style: italic; }
+.kidbubble.window::after { display: none; }
+@keyframes kidPop { from { scale: 0.2; rotate: -12deg; } to { scale: 1; rotate: 0deg; } }
+@keyframes kidBob { from { rotate: -1.5deg; } to { rotate: 1.5deg; } }
+
+/* Mouth sound effects: comic-book lettering. */
+.floater.sfx {
+  font-size: 22px;
+  color: #fff45c;
+  -webkit-text-stroke: 1.5px #2a1a10;
+  text-shadow: 3px 3px 0 #d8342c;
+  letter-spacing: 1px;
+  animation: sfxPop 0.25s cubic-bezier(0.3, 1.8, 0.5, 1) both;
+}
+.floater.sfx0 { rotate: -10deg; }
+.floater.sfx1 { rotate: 6deg; color: #7fe8ff; text-shadow: 3px 3px 0 #1f4e9c; }
+.floater.sfx2 { rotate: -4deg; color: #ffb3e0; text-shadow: 3px 3px 0 #7a2a6a; }
+@keyframes sfxPop { from { scale: 0.3; } to { scale: 1; } }
+
+/* The boredom meter under each kid in the fort panel. */
+.boredbar { height: 3px; margin-top: 3px; border-radius: 3px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
+.boredbar i { display: block; height: 100%; width: 0; background: #7fd0a0; transition: width 0.3s; }
+.boredbar.hot i { background: #ffb13d; }
+.crewmate .ice { width: auto; margin: 0 4px 0 0; padding: 4px 8px; font-size: 12px; white-space: nowrap; background: rgba(255, 179, 224, 0.15); border-color: rgba(255, 179, 224, 0.5); }
+.boy .ptrait { font-style: normal; font-size: 11px; flex: none; }
+
+/* "What Mum sees": a warm, faded look where the imaginary stuff disappears. */
+canvas { transition: filter 0.4s; }
+body.reveal canvas { filter: sepia(0.55) saturate(0.75) brightness(1.08) contrast(0.95); }
+#revealCap {
+  position: fixed;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  display: grid;
+  place-items: start center;
+  padding-top: 18vh;
+  opacity: 0;
+  transition: opacity 0.4s;
+  background: radial-gradient(ellipse at center, transparent 45%, rgba(60, 35, 10, 0.45));
+}
+#revealCap span {
+  font-family: var(--display);
+  font-size: clamp(26px, 5vw, 44px);
+  color: #fff6d8;
+  letter-spacing: 2px;
+  text-shadow: 0 3px 0 rgba(60, 35, 10, 0.6);
+  rotate: -3deg;
+}
+body.reveal #revealCap { opacity: 1; }
+
+/* ---------- tonight on Wattle Court ---------- */
+#nightEvent { z-index: 25; background: radial-gradient(ellipse at center, rgba(10, 12, 40, 0.5), rgba(8, 8, 24, 0.85)); }
+.nightcard { width: min(520px, 100%); text-align: center; padding: 22px 20px; background: #1c1924; border: 1px solid var(--line); border-radius: 22px; box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5); }
+#nightIcon { font-size: 56px; margin: 10px 0 4px; animation: kidPop 0.4s cubic-bezier(0.3, 1.8, 0.5, 1) both; }
+#nightText { font-size: 18px; font-weight: 800; margin: 0 0 16px; line-height: 1.35; }
+#nightOpts { display: flex; flex-direction: column; gap: 8px; }
+#nightOpts button { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 11px 14px; border-radius: 12px; background: var(--panel-2); border: 1px solid var(--line); font-size: 14px; font-weight: 700; text-align: left; }
+#nightOpts button:hover { border-color: var(--gold); }
+#nightOpts button.poor { opacity: 0.5; }
+#nightOpts .cost { color: var(--gold); font-weight: 900; white-space: nowrap; }
+@media (max-width: 820px) {
+  .kidbubble { font-size: 11px; max-width: 140px; padding: 4px 8px; }
+  .floater.sfx { font-size: 17px; }
+}
+#nightOpts .okey { flex: none; width: 22px; height: 22px; display: grid; place-items: center; border-radius: 6px; background: rgba(255, 255, 255, 0.08); font-size: 11px; color: var(--muted); }
+#nightOpts .olabel { flex: 1; }
+body.touch #nightOpts .okey { display: none; }
