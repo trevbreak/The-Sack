@@ -3,7 +3,7 @@ import { MapControls } from 'three/addons/controls/MapControls.js';
 import {
   WEAPONS, FORT_LEVELS, WEAPON_LEVELS, GOLEMS, weaponUpgradeCost, START, RECRUIT_COSTS, MAX_BOYS,
   BOY_NAMES, MAIN_BOYS, TRAITS, makeWave, DINNER_LINES, CHORE_LINES, CHORE_TIME,
-  STAGES, weekOf, troubleFor, GROUNDED_LINES, LATE_LINES, setDifficulty, DIFFICULTIES, ELITES, SPECS, specCost,
+  STAGES, weekOf, troubleFor, holidayOf, HOLIDAYS, levelDay, holidayBudget, GROUNDED_LINES, LATE_LINES, setDifficulty, DIFFICULTIES, ELITES, SPECS, specCost,
 } from './config.js';
 import { baseMods, drawPerks, PERKS } from './perks.js';
 import { Chatter } from './chatter.js';
@@ -115,6 +115,9 @@ export class Game {
     this.selected = null;
     this.hovered = null;
     this.stats = { kills: 0, built: 0, leaked: 0 };
+    this.hStats = { kills: 0, leaked: 0 }; // this holiday
+    this.holidayDone = null;
+    this.legends = [];
     this.recruits = 0;
     this.nextBoyId = 1;
     this.phase = 'morning'; // morning (build) → day (golems) → dusk (parents) → night → morning
@@ -556,6 +559,7 @@ export class Game {
     const d = this.diff;
     this.points = Math.round(START.points * d.points);
     this.sackHp = this.maxSackHp = d.sack;
+    this.openStages(1);
     this.ui.setWavePreview();
     this.audio.ensure();
     this.music.start();
@@ -571,7 +575,7 @@ export class Game {
     this.wave++;
     this.phase = 'day';
     this.waveActive = true;
-    this.waveDef = makeWave(this.wave);
+    this.waveDef = this.waveFor(this.wave);
     this.queue = [...this.waveDef.list];
     this.spawnTimer = 2;
     this.dayT = 0;
@@ -582,7 +586,7 @@ export class Game {
     this.dayLeaks = 0;
     // From day 3 a parent sometimes calls a boy in for chores mid-afternoon.
     this.chores = [];
-    const expected = troubleFor(this.wave).chores * this.mods.trouble;
+    const expected = troubleFor(levelDay(this.wave)).chores * this.mods.trouble;
     let n = Math.floor(expected) + (Math.random() < expected % 1 ? 1 : 0);
     for (let i = 0; i < n; i++) this.chores.push(this.dayLen * (0.15 + Math.random() * 0.55));
     this.chores.sort((a, b) => a - b);
@@ -604,7 +608,7 @@ export class Game {
     // First sighting of a creature type today: somebody reacts.
     if (!opts.mini && !this.seenToday.has(type)) {
       this.seenToday.add(type);
-      const first = this.wave === STAGES.find((st) => st.golem === type)?.day;
+      const first = this.newToday && this.newToday.has(type);
       const kind = g.def.boss ? 'boss' : type === 'lion' && first ? 'lion' : first ? 'newCreature' : null;
       const kid = kind && pick(this.boys.filter((b) => b.state === 'manning').concat([null]));
       if (kid) this.chatter.later(2.5, () => this.chatter.say(kid, kind, {}, { force: true }));
@@ -771,21 +775,103 @@ export class Game {
     this.dropTagAlongs();
     this.phase = 'night';
     this.nightT = 0;
-    const bonus = 20 + this.wave * 4;
+    const bonus = 15 + this.wave * 3;
     this.points += bonus;
     this.audio.play('coin');
     this.ui.toast(`🍝 Day ${this.wave} done. ${this.dayKills} golems smashed. +⭐${bonus} pocket money`, 'good');
     this.saveBest();
     this.ui.night(true, this.wave + 1);
+    const h = holidayOf(this.wave);
+    if (this.wave === h.last) {
+      // Last day of the holidays: report card, then term time.
+      this.holidayDone = h;
+      this.audio.play('win');
+      this.ui.showHolidayEnd(h, this.hStats);
+      return;
+    }
     this.nightEvent = rollNightEvent(this);
     if (this.nightEvent) this.ui.showNightEvent(this.nightEvent);
   }
 
+  // ---------- term time (between holidays) ----------
+  // The forts sit out in the weather for a whole term. Possums move in, storms
+  // knock bits off, things rust, cardboard gets thrown out on bin day.
+  termTime() {
+    const h = this.holidayDone;
+    const next = h.last + 1;
+    const report = [];
+    // Only the best-built few survive a whole term out in the weather.
+    const keep = [...this.forts].sort((a, b) => b.spent - a.spent).slice(0, 3);
+    for (const f of [...this.forts]) {
+      if (keep.includes(f)) continue;
+      report.push(`${pick(['🦝 Possums moved into', '⛈️ A storm flattened', '🐜 Termites ate', '🧒 Big kids wrecked', '🗑️ Bin day took', '🌧️ The rain melted'])} the ${f.weapon.short} ${FORT_LEVELS[f.level].name.toLowerCase()}.`);
+      this.sendHome(f);
+      f.destroy();
+      this.forts = this.forts.filter((x) => x !== f);
+    }
+    for (const f of keep) {
+      if (f.level > 0 && Math.random() < 0.5) {
+        f.spent -= FORT_LEVELS[f.level].cost;
+        f.level--;
+        f.buildStructure();
+        report.push(`💪 The ${f.weapon.short} survived, but it's a bit wobbly: back to a ${FORT_LEVELS[f.level].name}.`);
+      } else report.push(`🏆 The ${f.weapon.short} ${FORT_LEVELS[f.level].name.toLowerCase()} survived the whole term!`);
+    }
+    // End of the school year: the oldest kids move on, new ones move in.
+    if (h.key === 'christmas') this.newSchoolYear(report);
+    // Fresh holidays: new pocket money, new picks, the sack all fixed.
+    this.points = holidayBudget(next);
+    this.mods = baseMods();
+    this.mods.dmg *= Math.pow(1.03, this.legends.length);
+    this.perks = [];
+    this.ui.renderPerks();
+    this.maxSackHp = this.sackHp = this.diff.sack;
+    this.world.setDamage(0);
+    report.push(`💰 Pocket money for the ${holidayOf(next).name}: ⭐${this.points}. Weekly picks start fresh.`);
+    return report;
+  }
+
+  newSchoolYear(report) {
+    const regulars = this.crewKids().filter((b) => !MAIN_BOYS.includes(b.name));
+    const n = Math.min(regulars.length, this.crewKids().length >= 8 ? 3 : 1);
+    const leaving = regulars.sort(() => Math.random() - 0.5).slice(0, n);
+    for (const b of leaving) {
+      // Graduates become Legends: a little bonus that lasts forever.
+      this.legends.push(b.name);
+      report.push(`🎓 ${b.name} started high school and is too cool for forts now. Legend! (+3% damage forever)`);
+      if (b.fort) b.fort.crew = b.fort.crew.filter((x) => x !== b);
+      b.detach();
+      this.scene.remove(b.mesh);
+    }
+    this.boys = this.boys.filter((b) => !leaving.includes(b));
+    const newKid = this.addBoy(false);
+    report.push(`📦 A new family moved into No. ${newKid.houseNo}. ${newKid.name} (${newKid.trait.icon} ${newKid.trait.name}) wants to play.`);
+    this.ui.renderRoster();
+  }
+
+  // From the report card: head into term time.
+  toTerm() {
+    if (!this.holidayDone) return;
+    const report = this.termTime();
+    this.ui.hideHolidayEnd();
+    this.ui.showTerm(report, holidayOf(this.wave + 1));
+  }
+
+  // Term's over: the next holidays start.
+  endTerm() {
+    this.holidayDone = null;
+    this.hStats = { kills: 0, leaked: 0 };
+    this.ui.hideTerm();
+    this.ui.renderRoster();
+  }
+
+
   // The big button / Space: head out in the morning, or skip dinner time
   // (and the wait for it once the trail is clear) straight to the next morning.
   mainAction() {
-    if (this.perkOffer) return this.ui.showPerks(this.perkOffer, weekOf(this.wave + 1));
+    if (this.perkOffer) return this.ui.showPerks(this.perkOffer, this.perkLabel());
     if (this.nightEvent) return this.ui.showNightEvent(this.nightEvent);
+    if (this.holidayDone) return;
     if (this.phase === 'morning') this.startWave();
     else if (this.canSkip) this.skipToMorning();
   }
@@ -812,7 +898,7 @@ export class Game {
       this.endDay();
       if (this.over) return;
     }
-    if (this.nightEvent) return;
+    if (this.nightEvent || this.holidayDone) return;
     this.morning();
   }
 
@@ -844,10 +930,13 @@ export class Game {
     const out = this.boys.filter((b) => !b.away);
     if (out.length > 1) this.chatter.later(1, () => this.chatter.say(pick(out), 'morning', {}, { force: true }));
     this.ui.night(false);
-    this.ui.toast(`☀️ Day ${day} of the holidays${day % 7 === 1 ? ` · Week ${weekOf(day)}` : ''}. Build, then head out when you're ready.`);
+    const h = holidayOf(day);
+    if (h.dayIn === 1) this.ui.toast(`${h.icon} The ${h.name} start today! ${h.weeks} weeks. The last day brings a boss.`, 'good');
+    else this.ui.toast(`☀️ ${h.short} holidays, day ${h.dayIn} of ${h.len}${h.dayIn === h.len ? '. LAST DAY!' : ''}. Build, then head out when you're ready.`);
     this.openStages(day);
     this.ui.setWavePreview();
-    if (day > 1 && day % 7 === 1) this.offerPerks();
+    const hd = holidayOf(day);
+    if ((hd.dayIn === 1 && day > 1) || (hd.dayIn > 1 && hd.dayIn % 7 === 1)) this.offerPerks();
   }
 
   // ---------- weekly picks ----------
@@ -855,7 +944,12 @@ export class Game {
     const cards = drawPerks(this.perks);
     if (!cards.length) return;
     this.perkOffer = cards;
-    this.ui.showPerks(cards, weekOf(this.wave + 1));
+    this.ui.showPerks(cards, this.perkLabel());
+  }
+
+  perkLabel() {
+    const h = holidayOf(this.wave + 1);
+    return `${h.icon} ${h.short} · week ${Math.ceil(h.dayIn / 7)}`;
   }
 
   takePerk(key) {
@@ -872,12 +966,23 @@ export class Game {
     if (this.selected) this.ui.renderPanel();
   }
 
+  // Today's wave. Difficulty follows the holiday's own ramp (see levelDay),
+  // and the last day of each week (so the last day of every holiday) brings a boss.
+  waveFor(day) {
+    return makeWave(levelDay(day), { boss: holidayOf(day).dayIn % 7 === 0 });
+  }
+
   // Anything new starting today: new golems, new rifts.
   openStages(day) {
+    const eff = levelDay(day);
+    this.stagesSeen = this.stagesSeen || new Set();
+    this.newToday = new Set();
     for (const st of STAGES) {
-      if (st.day !== day || day === 1) continue;
+      if (st.day > eff || this.stagesSeen.has(st)) continue;
+      this.stagesSeen.add(st);
+      if (st.golem) this.newToday.add(st.golem);
       if (st.rift) this.openRift(st.rift);
-      this.ui.toast(`${st.rift ? '🌀' : '📣'} ${st.text}`, 'bad');
+      if (st.day > 1) this.ui.toast(`${st.rift ? '🌀' : '📣'} ${st.text}`, 'bad');
     }
   }
 
@@ -908,7 +1013,7 @@ export class Game {
 
   // Parents decide who's grounded or kept in late today. Never more than a third of the crew.
   rollTrouble(day) {
-    const t = { ...troubleFor(day) };
+    const t = { ...troubleFor(levelDay(day)) };
     t.grounded *= this.mods.trouble;
     t.late *= this.mods.trouble;
     const maxOut = Math.floor(this.boys.length / 3);
@@ -1008,6 +1113,7 @@ export class Game {
   golemKilled(g, fort) {
     this.points += g.reward;
     this.stats.kills++;
+    this.hStats.kills++;
     this.dayKills++;
     if (fort) fort.kills++;
     this.effects.float(`+${g.reward}`, g.headPos(), g.def.boss ? 'big' : '');
@@ -1027,6 +1133,7 @@ export class Game {
     this.sackHp = Math.max(0, this.sackHp - g.def.damage);
     this.world.setDamage(1 - this.sackHp / this.maxSackHp);
     this.stats.leaked++;
+    this.hStats.leaked++;
     this.dayLeaks++;
     this.audio.play('hurt');
     this.ui.damageFlash();
@@ -1325,7 +1432,7 @@ export class Game {
       if ((home && this.duskT > 5.5) || this.duskT > 15) this.endDay();
     } else if (this.phase === 'night') {
       this.nightT += dt / this.speed;
-      if (this.nightT > 1.6 && !this.nightEvent) this.morning();
+      if (this.nightT > 1.6 && !this.nightEvent && !this.holidayDone) this.morning();
     }
     for (const g of this.golems) g.update(dt);
     for (const f of this.forts) f.update(dt);

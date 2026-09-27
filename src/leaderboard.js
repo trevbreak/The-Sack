@@ -1,3 +1,4 @@
+import { holidayOf, holidayLabel } from './config.js';
 // Household leaderboard. Scores live on the server (shared by every computer
 // in the house). If the server can't be reached, they're kept in this browser.
 const LOCAL_KEY = 'theSack.scores';
@@ -75,7 +76,7 @@ export function boardHTML(scores, difficulty, { limit = 10, highlight = null } =
       (s, i) => `<li class="${s.id === highlight ? 'me' : ''}">
         <span class="lb-rank">${MEDALS[i] || i + 1}</span>
         <span class="lb-name">${esc(s.name)}</span>
-        <span class="lb-day">Day ${s.day}</span>
+        <span class="lb-day" title="Day ${s.day} overall">${holidayOf(s.day).icon} ${holidayLabel(s.day)}</span>
         <span class="lb-date">${formatDate(s.date)}</span>
       </li>`,
     )

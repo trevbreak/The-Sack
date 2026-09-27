@@ -13,7 +13,7 @@ A 3D fort-defence game. A crew of boys on a suburban cul-de-sac (Wattle Court) b
 | ![Title screen with difficulty picker and household leaderboard](docs/screenshots/title.jpg) | ![A Sky Fort's rocket launcher at 5 stars, choosing between Roman Candle and Big Bertha](docs/screenshots/specialise.jpg) |
 | **Title screen** with difficulties and the household leaderboard | **Specialisations** once a weapon has all 5 stars |
 | ![Sunday Night Plans: pick one of three cards for the week](docs/screenshots/weekly-pick.jpg) | ![Giant, Shielded, Speedy and Brood creature variants with coloured rings](docs/screenshots/variants.jpg) |
-| **Sunday Night Plans**: a new pick each week | **Tougher variants** from week 5 |
+| **Sunday Night Plans**: a new pick each week | **Tougher variants** later in the year |
 | ![The dusk reveal: the picture goes sepia and a mum asks why they're yelling at the bushes](docs/screenshots/what-mum-sees.jpg) | ![Tonight on Wattle Court: a sleepover decision at the dinner table](docs/screenshots/tonight.jpg) |
 | **…what Mum sees** at dusk | **Tonight on Wattle Court**: choices at the dinner table |
 
@@ -77,35 +77,39 @@ The game works with touch: drag to move, pinch to zoom, twist two fingers to rot
     *   🎆 Bottle Rocket Fort (fire, splash, long range): strong against Ice
     *   🔫 Foam Dart Fort (foam, rapid fire): useless against Stone
     *   🔍 Magnifying Glass Fort (fire beam): heats up the longer it stays on one golem, up to 3×
-    *   🔌 Bug Zapper Fort (zap): lightning that chains to 3 more golems
+    *   🔌 Bug Zapper Fort (zap): lightning that chains to 2 more golems (and pops shields)
     *   🧂 Salt Mortar Fort (salt, long range, big splash): melts Goop
-*   **Man them.** A fort only fires with a boy in it. Boys run from the sack to their fort. Each boy has a trait (Good Arm, Quick Hands, Eagle Eye, Fearless). From the Pallet Fort up, a fort fits **two kids**. They work as a team (+50% fire rate, +25% damage), and both kids' traits count. The crew goes up to 20 boys. AJ and Kai start, and Jimmy is the first recruit.
+*   **Man them.** A fort only fires with a boy in it. Boys run from the sack to their fort. Each kid has a personality (see below). From the Pallet Fort up, a fort fits **two kids**. They work as a team (+50% fire rate, +25% damage), and both kids' personalities count. The crew goes up to 20 boys. AJ and Kai start, and Jimmy is the first recruit.
 *   **Earn points** by smashing golems. Spend them on:
     *   building a fort up: Cardboard Box → Pallet Fort → Treehouse Tower → Sky Fort → Mega Fort
     *   weapon upgrades (up to ★★★★★)
     *   recruiting more boys from the street
     *   **Trail Works (T):** dig detours so golems walk further (Hairpin up the Ridge, Creek Bend, Big Loop past the Dam). They cost ⭐350, then ⭐600, then ⭐900, and can only be dug in the morning.
-*   **Every wave is one day of the summer holidays.** Mornings are for building. When you head out, the clock runs from 3:30pm to 6pm. At 6pm the parents yell everyone in for dinner and any golems left slink back into the bush. Press Space to skip dinner, or to skip ahead once the trail is clear.
+*   **Every wave is one day of the school holidays.** Mornings are for building. When you head out, the clock runs from 3:30pm to 6pm. At 6pm the parents yell everyone in for dinner and any golems left slink back into the bush. Press Space to skip dinner, or to skip ahead once the trail is clear.
 *   **Dinner waits for the last creature.** The 6pm dinner call only comes once every creature that day is smashed or has reached the sack, and the clock stretches to fit.
 *   **The street takes a beating.** As the sack loses health, the houses visibly fall apart: smashed and boarded-up windows, fallen fences, flattened letterboxes, doors hanging off, cracked walls, and smoking holes in roofs. Overnight repairs fix a bit each morning.
-*   **The holidays never end on their own.** They last until the golems take the sack, and then it's back to school. Your best day is saved as a high score. The sack gets 1 health back each morning.
-*   **Every week gets harder:**
-    *   Week 1: 🔥 Fire golems, then ⚡ Storm on day 4, then 🕷️ Huntsman Spiders on day 5 (pounce forward down the trail)
-    *   Week 2 (day 8): a **second rift** opens in the north-east bush, and ❄️ Ice golems arrive. 🦁 **Sky Lions** on day 11: they fly above the trail, and lobbed weapons (balloons, salt) can't reach them
-    *   Week 3 (day 15): 🪨 Stone golems, then 🟢 Goop on day 18 (splits in two when smashed)
-    *   Week 4 (day 22): a **third rift** opens in the east paddock, near the houses, and 🤖 Robots arrive (armour cuts every hit). 🐨 **Drop Bears** on day 25: they leap onto the first manned fort they pass and scare the kids stiff for 4 seconds
-    *   Week 5 (day 29): 🪵 Wood golems (regrow if you stop hitting them). 🐊 **Bunyips** on day 32: they dive underground every few seconds, where nothing can hit them
-    *   Week 6 (day 36): a **fourth rift** opens down by the creek
-    *   A 🌋 Magma Titan finishes every week (days 7, 14, 21…), with more of them as time goes on. Golem health and numbers keep climbing.
+*   **The school year is a set of levels.** Each school holidays is one level:
+    *   🍂 **Autumn**, 🧣 **Winter** and 🌸 **Spring** holidays last 2 weeks each; 🎄 **Christmas** lasts 4 weeks. Then it's Year 2, and round again.
+    *   The last day of every holiday (and every 7th day) brings a 🌋 **Magma Titan** boss.
+    *   Survive the last day and you get a report card, then **term time**: while the kids are at school, most forts fall apart (possums, storms, termites, bin day). Only your **3 best-built forts survive**, some a bit wobbly. Points reset to that holiday's pocket money, the sack is fully repaired, and the weekly picks start fresh.
+    *   Difficulty restarts low at the start of each holiday and ramps up through it, but every holiday starts harder than the last.
+    *   **What carries over:** your crew, the surviving forts, trail works you've dug and rifts that have opened.
+    *   **End of the school year** (after Christmas): a few older kids start high school and leave the crew. They become **Legends** (+3% damage each, forever), and a new family moves in.
+    *   If the golems take the sack, it's back to school early. Your best run (total days) is saved as a high score, and the leaderboard shows which holiday you reached.
+*   **New creatures and rifts** arrive as the year goes on:
+    *   Autumn: 🔥 Fire golems, ⚡ Storm, 🕷️ Huntsman Spiders (pounce forward down the trail), then a **second rift** opens in the north-east bush with ❄️ Ice golems, and 🦁 **Sky Lions** (they fly above the trail; lobbed weapons like balloons and salt can't reach them)
+    *   Winter: 🪨 Stone golems, then 🟢 Goop (splits in two when smashed)
+    *   Spring: a **third rift** opens in the east paddock, near the houses, and 🤖 Robots arrive (armour cuts every hit)
+    *   Christmas: 🐨 **Drop Bears** (leap onto the first manned fort they pass and scare the kids stiff), 🪵 Wood golems (regrow if you stop hitting them) and tougher variants, 🐊 **Bunyips** (dive underground where nothing can hit them), then a **fourth rift** down by the creek
 *   **Rifts:** golems from a new rift walk its own trail and join the main trail partway along, skipping any forts before the junction. Dormant rifts glow faintly in the bush before they open. When one opens, it happens in the morning, so you get time to build near its trail.
 *   **Kids being kids:**
-    *   **Personalities:** Dreamer 🌈, Focused 🎯, Sporty ⚡, Big Arm 💪, Show-off 😎, Bossy 📣 (boosts nearby forts), Goody-two-shoes 😇 (never in trouble), Ratbag 😈 (strong, always in trouble), Scaredy-cat 😱.
+    *   **Personalities** (each kid gets one): Dreamer 🌈, Focused 🎯, Sporty ⚡, Big Arm 💪, Show-off 😎, Bossy 📣 (boosts nearby forts), Goody-two-shoes 😇 (never in trouble), Ratbag 😈 (strong, always in trouble), Scaredy-cat 😱.
     *   **Boredom:** kids on quiet forts get bored (the bar under their name in the fort panel) and wander off to shoot hoops, do handstands or play Minecraft. The others complain. They come back on their own, or bribe them back with an icy pole 🍦. Put Focused kids on the quiet forts.
     *   **Chatter:** the kids talk, argue ("You're dead, lie down!" / "Nuh-uh, I had a force field!"), cheer, sulk and make their own sound effects.
     *   **Tonight on Wattle Court:** from day 3, some nights bring a choice at the dinner table (sleepovers, muddy shoes, broken windows, a little sister tagging along…) with consequences tomorrow.
     *   **What Mum sees:** sometimes at dusk a parent looks out, and for a moment it's just kids waving sticks at nothing.
-*   **Sunday night plans:** at the start of every week from week 2, pick 1 of 3 cards that lasts the rest of the holidays: cheaper forts, faster kids, a free cousin, +30% to one damage type, or a **twist** with an upside and a downside (Heatwave, Cold Snap, Storm Season, Buried Treasure, Big Sleepover). Picks show as icons in the day panel.
-*   **Tougher variants** (from week 5, day 29): some creatures turn up 🔺 Giant, 💨 Speedy, 🛡️ Shielded (a bubble soaks hits; zaps pop it 3× faster) or 🥚 Brood (bursts into 3 little ones). A coloured ring marks them. From about day 50 a few carry two.
+*   **Sunday night plans:** at the start of each holiday (from Winter) and each new week, pick 1 of 3 cards that lasts the rest of that holiday: cheaper forts, faster kids, a free cousin, +30% to one damage type, or a **twist** with an upside and a downside (Heatwave, Cold Snap, Storm Season, Buried Treasure, Big Sleepover). Picks show as icons in the day panel.
+*   **Tougher variants** (from the Christmas holidays): some creatures turn up 🔺 Giant, 💨 Speedy, 🛡️ Shielded (a bubble soaks hits; zaps pop it 3× faster) or 🥚 Brood (bursts into 3 little ones). A coloured ring marks them. Later in Year 2 a few carry two.
 *   **Specialisations:** once a weapon has all 5 stars, pick one of two specialisations, e.g. Sniper Slingshot or Scatter Shot, Roman Candle or Big Bertha, Tesla Coil or EMP Blaster, Rock Salt Cannon (can hit sky lions) or Salt Storm.
 *   **Parents cause trouble**, more often each week:
     *   **Grounded** (from week 2): a kid stays home all day. You find out in the morning.

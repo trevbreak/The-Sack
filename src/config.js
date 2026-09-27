@@ -206,16 +206,59 @@ export const STAGES = [
   { day: 1, golem: 'fire', text: 'Fire golems are crawling out of the western bush.' },
   { day: 4, golem: 'storm', text: 'Storm golems! Small, fast and sparky.' },
   { day: 5, golem: 'spider', text: 'Huntsman spiders! Big hairy ones that pounce down the trail.' },
-  { day: 8, golem: 'ice', rift: 1, text: 'Week 2: a second rift has torn open in the north-east bush. Ice golems are coming.' },
+  { day: 8, golem: 'ice', rift: 1, text: 'A second rift has torn open in the north-east bush. Ice golems are coming.' },
   { day: 11, golem: 'lion', text: 'SKY LIONS! They fly high above the trail. Balloons and salt can\'t reach them.' },
-  { day: 15, golem: 'stone', text: 'Week 3: Stone golems. Slow, and very hard to knock over.' },
+  { day: 15, golem: 'stone', text: 'Stone golems. Slow, and very hard to knock over.' },
   { day: 18, golem: 'goop', text: 'Goop golems! Smash one and you get two.' },
-  { day: 22, golem: 'robot', rift: 2, text: 'Week 4: a third rift has opened in the east paddock, right near the houses. Robot golems too.' },
+  { day: 22, golem: 'robot', rift: 2, text: 'A third rift has opened in the east paddock, right near the houses. Robot golems too.' },
   { day: 25, golem: 'dropbear', text: 'Drop bears! They leap onto forts and scare the kids stiff.' },
-  { day: 29, golem: 'wood', text: 'Week 5: Wood golems grow back if you stop hitting them. And watch out: some creatures are turning up Giant, Speedy, Shielded or full of babies.' },
+  { day: 29, golem: 'wood', text: 'Wood golems grow back if you stop hitting them. And watch out: some creatures are turning up Giant, Speedy, Shielded or full of babies.' },
   { day: 32, golem: 'bunyip', text: 'Something has crawled out of the creek. Bunyips dive underground where nothing can hit them.' },
-  { day: 36, rift: 3, text: 'Week 6: a fourth rift has opened down by the creek. They\'re coming from everywhere now.' },
+  { day: 36, rift: 3, text: 'A fourth rift has opened down by the creek. They\'re coming from everywhere now.' },
 ];
+// ---------- the school year ----------
+// Three two-week holidays, then four weeks over Christmas. Day numbers keep counting
+// across years (difficulty keeps climbing); each holiday ends on a boss day.
+export const HOLIDAYS = [
+  { key: 'autumn', name: 'Autumn Holidays', short: 'Autumn', icon: '🍂', weeks: 2 },
+  { key: 'winter', name: 'Winter Holidays', short: 'Winter', icon: '🧣', weeks: 2 },
+  { key: 'spring', name: 'Spring Holidays', short: 'Spring', icon: '🌸', weeks: 2 },
+  { key: 'christmas', name: 'Christmas Holidays', short: 'Christmas', icon: '🎄', weeks: 4 },
+];
+export const YEAR_DAYS = HOLIDAYS.reduce((a, h) => a + h.weeks * 7, 0);
+
+// Which holiday a (1-based) day falls in, and where in it.
+export function holidayOf(day) {
+  const d = Math.max(1, day);
+  const year = Math.floor((d - 1) / YEAR_DAYS) + 1;
+  let r = (d - 1) % YEAR_DAYS;
+  for (let i = 0; i < HOLIDAYS.length; i++) {
+    const len = HOLIDAYS[i].weeks * 7;
+    if (r < len) return { ...HOLIDAYS[i], index: i, year, dayIn: r + 1, len, first: d - r, last: d - r + len - 1 };
+    r -= len;
+  }
+}
+
+// Each holiday is a level: difficulty restarts low and ramps through the holiday,
+// but every holiday starts a bit harder than the last one did.
+export const HOLIDAY_STEP = 5;
+export function holidayNumber(day) {
+  const h = holidayOf(day);
+  return (h.year - 1) * HOLIDAYS.length + h.index;
+}
+export function levelDay(day) {
+  return holidayOf(day).dayIn + holidayNumber(day) * HOLIDAY_STEP;
+}
+// Pocket money the crew starts each holiday with (points reset every holiday).
+export function holidayBudget(day) {
+  return Math.round((START.points + holidayNumber(day) * 130) * DIFF.points);
+}
+
+export function holidayLabel(day) {
+  const h = holidayOf(day);
+  return `${h.year > 1 ? `Year ${h.year} · ` : ''}${h.short} day ${h.dayIn}`;
+}
+
 export const BOSS_EVERY = 7; // a Magma Titan to finish each week
 
 export const weekOf = (n) => Math.floor((n - 1) / 7) + 1;
@@ -270,7 +313,7 @@ export const SPECS = {
 };
 export const specCost = (w) => Math.round(w.cost * 6);
 
-export function makeWave(n) {
+export function makeWave(n, opts = {}) {
   const rnd = mulberry32(n * 7919 + 13);
   const hpScale = (1 + 0.08 * (n - 1) + 0.0065 * (n - 1) ** 2) * DIFF.hp;
   const rewardScale = (1 + 0.04 * (n - 1)) * DIFF.reward;
@@ -324,7 +367,7 @@ export function makeWave(n) {
     }
   }
 
-  if (n % BOSS_EVERY === 0) {
+  if (opts.boss ?? n % BOSS_EVERY === 0) {
     list[list.length - 1].gap += 3;
     const bosses = 1 + Math.floor(n / 21);
     for (let b = 0; b < bosses; b++) list.push({ type: 'magma', gap: 5, rift: b % rifts });
