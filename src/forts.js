@@ -340,7 +340,10 @@ const _tmp = new THREE.Vector3();
 export class Fort {
   constructor(game, x, z, key) {
     this.game = game;
-    this.weapon = WEAPONS[key];
+    // base: the weapon as built. weapon: what it is now (changes if it gets specialised).
+    this.base = WEAPONS[key];
+    this.weapon = this.base;
+    this.spec = null;
     this.level = 0;
     this.wlevel = 0;
     this.crew = [];
@@ -426,9 +429,10 @@ export class Fort {
     const fl = FORT_LEVELS[this.level];
     const wl = WEAPON_LEVELS[this.wlevel];
     const on = this.mannedCrew;
-    let range = w.range * fl.rangeMul;
-    let damage = w.damage * fl.dmgMul * wl.dmg;
-    let rate = w.rate * wl.rate;
+    const m = this.game.mods;
+    let range = w.range * fl.rangeMul * m.range;
+    let damage = w.damage * fl.dmgMul * wl.dmg * m.dmg;
+    let rate = w.rate * wl.rate * m.rate;
     for (const b of on) {
       range *= b.trait.range || 1;
       damage *= b.trait.dmg || 1;
@@ -454,6 +458,26 @@ export class Fort {
   upgradeWeapon() {
     this.wlevel++;
     this.w.group.scale.setScalar(1 + 0.1 * this.wlevel);
+  }
+
+  specialise(spec) {
+    const w = { ...this.base, name: spec.name, short: spec.name, icon: spec.icon, desc: spec.desc };
+    for (const [k, v] of Object.entries(spec.mul || {})) w[k] = (this.base[k] || 0) * v;
+    Object.assign(w, spec.set || {});
+    this.weapon = w;
+    this.spec = spec.key;
+    if (spec.targeting) this.targeting = spec.targeting;
+    this.w.group.scale.setScalar(1.7);
+  }
+
+  // Extra targets for multi-shot weapons: the best few in range, main target first.
+  extraTargets(main, range, n) {
+    const r2 = range * range;
+    const { x, z } = this.group.position;
+    return this.game.golems
+      .filter((g) => g !== main && g.targetable && !(g.def.flying && this.weapon.arc) && (g.pos.x - x) ** 2 + (g.pos.z - z) ** 2 <= r2)
+      .sort((a, b) => a.remaining - b.remaining)
+      .slice(0, n);
   }
 
   findTarget(range) {
@@ -541,15 +565,27 @@ export class Fort {
       this.beamT = 0;
     }
     this.beamT += dt;
-    const heat = 1 + Math.min(this.beamT, 3) * 0.7; // up to 3.1× after 3 seconds
-    target.takeDamage(st.damage * st.rate * heat * dt, this.weapon.dmgType, this, true);
+    const w = this.weapon;
+    const heat = 1 + Math.min(this.beamT, w.heatTime || 3) * (w.heatRate || 0.7); // normally up to 3.1× after 3 seconds
+    this.heat = heat;
+    target.takeDamage(st.damage * st.rate * heat * dt, w.dmgType, this, true);
+    // Prism: split the beam onto nearby creatures at half strength.
+    if (w.prism) {
+      const near = this.game.golems
+        .filter((g) => g !== target && g.targetable && (g.pos.x - target.pos.x) ** 2 + (g.pos.z - target.pos.z) ** 2 < 30)
+        .slice(0, w.prism);
+      for (const g of near) {
+        g.takeDamage(st.damage * st.rate * heat * 0.5 * dt, w.dmgType, this, true);
+        if (Math.random() < dt * 10) this.game.effects.bolt([target.aimPoint(), g.aimPoint()], 0xfff2a0);
+      }
+    }
     const from = this.muzzleWorld();
     const to = target.aimPoint(_tmp);
     this.beam.visible = true;
     this.beam.position.copy(from);
     this.beam.lookAt(to);
     this.beam.scale.set(0.6 + heat * 0.4, 0.6 + heat * 0.4, from.distanceTo(to));
-    beamMat.color.setHex(heat > 2.5 ? 0xffffff : heat > 1.8 ? 0xffd27a : 0xfff2a0);
+    beamMat.color.setHex(heat > 4 ? 0xff8ad8 : heat > 2.5 ? 0xffffff : heat > 1.8 ? 0xffd27a : 0xfff2a0);
     if (Math.random() < dt * 12) this.game.effects.burst(to, heat > 2 ? 0xff7a2f : 0xffd23e, 1, { speed: 2, up: 3, size: 0.12, life: 0.4 });
     this.game.audio.play('sizzle');
   }
@@ -565,7 +601,10 @@ export class Fort {
     this.kick = 1;
     const from = this.muzzleWorld();
     if (this.weapon.chain) this.zap(target, st, from);
-    else this.game.projectiles.fire(this, target, from, st);
+    else {
+      this.game.projectiles.fire(this, target, from, st);
+      if (this.weapon.multi) for (const t of this.extraTargets(target, st.range, this.weapon.multi - 1)) this.game.projectiles.fire(this, t, from, st);
+    }
     this.game.audio.play(this.weapon.key);
   }
 
@@ -574,9 +613,10 @@ export class Fort {
     const hit = [target];
     const pts = [from, target.aimPoint()];
     let cur = target;
-    for (let i = 0; i < this.weapon.chain; i++) {
+    const w = this.weapon;
+    for (let i = 0; i < w.chain; i++) {
       let next = null;
-      let bd = 20;
+      let bd = (w.chainR || 4.5) ** 2;
       for (const g of this.game.golems) {
         if (!g.targetable || hit.includes(g)) continue;
         const d = (g.pos.x - cur.pos.x) ** 2 + (g.pos.z - cur.pos.z) ** 2;
@@ -592,7 +632,8 @@ export class Fort {
     }
     this.game.effects.bolt(pts, 0x8fe8ff);
     hit.forEach((g, i) => {
-      g.takeDamage(st.damage * Math.pow(0.65, i), this.weapon.dmgType, this);
+      g.takeDamage(st.damage * Math.pow(w.falloff || 0.65, i), w.dmgType, this);
+      if (w.stun) g.applySlow(1, w.stun, true);
       this.game.effects.burst(pts[i + 1], 0xbff4ff, 3, { speed: 3, up: 3, size: 0.1, life: 0.3 });
     });
   }

@@ -696,3 +696,46 @@ body.touch #waveBtn small { display: none; }
 @media (max-height: 500px) {
   #rightCol { bottom: 104px; }
 }
+
+/* ---------- specialisations ---------- */
+.spechead { font-size: 12px; font-weight: 800; color: var(--gold); margin-top: 2px; }
+.ups button.spec { background: rgba(255, 208, 46, 0.12); border-color: rgba(255, 208, 46, 0.5); }
+.chip.el-elite { border-color: #ff9ad8; color: #ffd0ee; background: rgba(255, 90, 180, 0.14); }
+
+/* ---------- weekly picks ---------- */
+#perkStrip { display: flex; flex-wrap: wrap; gap: 2px; font-size: 16px; margin: -4px 0 6px; cursor: pointer; }
+#perkStrip.hidden { display: none; }
+#perkPick { z-index: 25; }
+.perkcard { width: min(760px, 100%); text-align: center; }
+.perkcard h2 { margin: 4px 0 6px; font-family: var(--display); font-weight: 400; font-size: clamp(32px, 6vw, 48px); letter-spacing: 2px; color: var(--gold); text-shadow: 0 4px 0 rgba(0, 0, 0, 0.35); }
+.perkcard p { margin: 0 0 18px; color: #eee6d8; font-weight: 700; }
+.perkhead span { display: inline-block; padding: 3px 12px; border-radius: 999px; background: rgba(155, 92, 255, 0.3); border: 1px solid rgba(155, 92, 255, 0.6); font-size: 12px; font-weight: 900; letter-spacing: 0.1em; text-transform: uppercase; }
+#perkCards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.perk {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 18px 14px 16px;
+  border-radius: 18px;
+  background: var(--panel);
+  border: 2px solid var(--line);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  transition: transform 0.12s, border-color 0.12s;
+}
+.perk:hover { transform: translateY(-4px); border-color: var(--gold); }
+.perk .picon { font-size: 44px; line-height: 1; }
+.perk b { font-family: var(--display); font-weight: 400; font-size: 20px; letter-spacing: 1px; }
+.perk small { font-size: 13px; color: #d9d0c4; font-weight: 700; line-height: 1.35; }
+.perk em { font-style: normal; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #ffb3e0; background: rgba(255, 90, 180, 0.18); padding: 2px 8px; border-radius: 999px; }
+.perk.twist { border-color: rgba(255, 90, 180, 0.45); }
+.perk .key { position: absolute; top: 8px; left: 10px; font-size: 11px; color: var(--muted); font-weight: 900; }
+body.touch .perk .key { display: none; }
+@media (max-width: 640px) {
+  #perkCards { grid-template-columns: 1fr; gap: 8px; }
+  .perk { flex-direction: row; flex-wrap: wrap; text-align: left; padding: 10px 12px; gap: 4px 10px; }
+  .perk .picon { font-size: 30px; }
+  .perk small { flex-basis: 100%; }
+  .perk .key { display: none; }
+}

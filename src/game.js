@@ -3,8 +3,9 @@ import { MapControls } from 'three/addons/controls/MapControls.js';
 import {
   WEAPONS, FORT_LEVELS, WEAPON_LEVELS, GOLEMS, weaponUpgradeCost, START, RECRUIT_COSTS, MAX_BOYS,
   BOY_NAMES, MAIN_BOYS, TRAITS, makeWave, DINNER_LINES, CHORE_LINES, CHORE_TIME,
-  STAGES, weekOf, troubleFor, GROUNDED_LINES, LATE_LINES, setDifficulty, DIFFICULTIES,
+  STAGES, weekOf, troubleFor, GROUNDED_LINES, LATE_LINES, setDifficulty, DIFFICULTIES, ELITES, SPECS, specCost,
 } from './config.js';
+import { baseMods, drawPerks, PERKS } from './perks.js';
 import { TrailPath, DETOURS, DETOUR_COSTS, RIFTS, spurPath } from './path.js';
 import { Parent } from './parents.js';
 import { buildWorld } from './world.js';
@@ -64,6 +65,9 @@ export class Game {
     this.points = START.points;
     this.sackHp = START.sackHp;
     this.maxSackHp = START.sackHp;
+    this.mods = baseMods();
+    this.perks = [];
+    this.perkOffer = null;
     this.wave = 0;
     this.waveActive = false;
     this.queue = [];
@@ -203,6 +207,28 @@ export class Game {
     return boy;
   }
 
+  // ---------- costs (weekly perks can change these) ----------
+  fortCost(key) {
+    return Math.round(WEAPONS[key].cost * this.mods.fortCost);
+  }
+
+  fortUpCost(f) {
+    const next = FORT_LEVELS[f.level + 1];
+    return next ? Math.round(next.cost * this.mods.upCost) : 0;
+  }
+
+  weaponUpCost(f) {
+    return Math.round(weaponUpgradeCost(f.base, f.wlevel) * this.mods.upCost);
+  }
+
+  specCost(f) {
+    return Math.round(specCost(f.base) * this.mods.upCost);
+  }
+
+  get maxBoys() {
+    return MAX_BOYS + this.mods.extraBoys;
+  }
+
   recruitCost() {
     return RECRUIT_COSTS[Math.min(this.recruits, RECRUIT_COSTS.length - 1)];
   }
@@ -210,7 +236,7 @@ export class Game {
   recruit() {
     if (!this.started || this.over) return;
     if (this.phase === 'dusk' || this.phase === 'night') return this.fail('Everyone\'s inside for dinner. Try in the morning.');
-    if (this.boys.length >= MAX_BOYS) return this.fail('Every kid on the street is already in the crew!');
+    if (this.boys.length >= this.maxBoys) return this.fail('Every kid on the street is already in the crew!');
     const cost = this.recruitCost();
     if (this.points < cost) return this.fail(`Need ⭐${cost} to recruit another boy`);
     this.points -= cost;
@@ -258,7 +284,7 @@ export class Game {
     if (!this.started || this.over) return;
     const w = WEAPONS[key];
     if (this.buildKey === key) return this.cancelBuild();
-    if (this.points < w.cost) return this.fail(`Need ⭐${w.cost} for a ${w.name}`);
+    if (this.points < this.fortCost(key)) return this.fail(`Need ⭐${this.fortCost(key)} for a ${w.name}`);
     this.buildKey = key;
     this.select(null);
     this.audio.play('click');
@@ -284,9 +310,10 @@ export class Game {
   }
 
   placeFort(x, z, key, keepBuilding) {
-    const w = WEAPONS[key];
-    this.points -= w.cost;
+    const cost = this.fortCost(key);
+    this.points -= cost;
     const f = new Fort(this, x, z, key);
+    f.spent = cost;
     this.forts.push(f);
     this.stats.built++;
     this.effects.burst(new THREE.Vector3(x, 0.6, z), 0xc79a64, 18, { speed: 4, up: 5, size: 0.22 });
@@ -299,7 +326,7 @@ export class Game {
     } else {
       this.ui.toast('Nobody free to man it! Recruit a boy (R) or move one over.', 'warn');
     }
-    if (!keepBuilding || this.points < w.cost) {
+    if (!keepBuilding || this.points < cost) {
       this.cancelBuild();
       this.select(f);
     }
@@ -308,9 +335,10 @@ export class Game {
   upgradeFort(f) {
     const next = FORT_LEVELS[f.level + 1];
     if (!next) return;
-    if (this.points < next.cost) return this.fail(`Need ⭐${next.cost} to build it up`);
-    this.points -= next.cost;
-    f.spent += next.cost;
+    const cost = this.fortUpCost(f);
+    if (this.points < cost) return this.fail(`Need ⭐${cost} to build it up`);
+    this.points -= cost;
+    f.spent += cost;
     f.upgradeStructure();
     this.effects.burst(f.pos.clone().setY(1.5), 0xcaa46d, 22, { speed: 4, up: 6, size: 0.22 });
     this.audio.play('build');
@@ -320,13 +348,29 @@ export class Game {
 
   upgradeWeapon(f) {
     if (f.wlevel >= WEAPON_LEVELS.length - 1) return;
-    const cost = weaponUpgradeCost(f.weapon, f.wlevel);
+    const cost = this.weaponUpCost(f);
     if (this.points < cost) return this.fail(`Need ⭐${cost} to upgrade the ${f.weapon.short}`);
     this.points -= cost;
     f.spent += cost;
     f.upgradeWeapon();
     this.effects.burst(f.pos.clone().setY(f.height + 1), 0xffd02e, 16, { speed: 3, up: 5, size: 0.14 });
     this.audio.play('upgrade');
+    this.ui.renderPanel();
+  }
+
+  // A 5-star weapon can be specialised one of two ways.
+  specialise(f, i) {
+    const spec = SPECS[f.base.key]?.[i];
+    if (!spec || f.spec || f.wlevel < WEAPON_LEVELS.length - 1) return;
+    const cost = this.specCost(f);
+    if (this.points < cost) return this.fail(`Need ⭐${cost} to make it a ${spec.name}`);
+    this.points -= cost;
+    f.spent += cost;
+    f.specialise(spec);
+    this.effects.burst(f.pos.clone().setY(f.height + 1), 0xffd02e, 30, { speed: 5, up: 7, size: 0.18 });
+    this.effects.float(spec.name.toUpperCase() + '!', f.pos.clone().setY(f.height + 2), 'big');
+    this.audio.play('win');
+    this.ui.toast(`${spec.icon} It's a ${spec.name} now! ${spec.desc}`, 'good');
     this.ui.renderPanel();
   }
 
@@ -411,7 +455,7 @@ export class Game {
     this.dayLeaks = 0;
     // From day 3 a parent sometimes calls a boy in for chores mid-afternoon.
     this.chores = [];
-    const expected = troubleFor(this.wave).chores;
+    const expected = troubleFor(this.wave).chores * this.mods.trouble;
     let n = Math.floor(expected) + (Math.random() < expected % 1 ? 1 : 0);
     for (let i = 0; i < n; i++) this.chores.push(this.dayLen * (0.15 + Math.random() * 0.55));
     this.chores.sort((a, b) => a - b);
@@ -426,8 +470,8 @@ export class Game {
     this.ui.setWavePreview();
   }
 
-  spawnGolem(type, hpScale = this.waveDef.hpScale, rewardScale = this.waveDef.rewardScale, rift = 0) {
-    const g = new Golem(this, type, hpScale, rewardScale, this.spurs[rift] || rift === 0 ? rift : 0);
+  spawnGolem(type, hpScale = this.waveDef.hpScale, rewardScale = this.waveDef.rewardScale, rift = 0, opts = {}) {
+    const g = new Golem(this, type, hpScale, rewardScale, this.spurs[rift] || rift === 0 ? rift : 0, opts);
     this.golems.push(g);
     if (g.def.flying) this.audio.play('roar');
     return g;
@@ -437,17 +481,25 @@ export class Game {
   timeLeftForGolems() {
     let need = 0;
     for (const g of this.golems) {
-      if (g.alive && !g.retreating) need = Math.max(need, g.remaining / g.def.speed);
+      if (g.alive && !g.retreating) need = Math.max(need, g.remaining / g.baseSpeed);
     }
     let t = Math.max(0, this.spawnTimer);
     for (const it of this.queue) {
       const r = it.rift || 0;
       const sp = this.spurs[r];
       const walk = sp ? sp.length + this.path.length - this.joinDists[r] : this.path.length;
-      need = Math.max(need, t + walk / GOLEMS[it.type].speed);
+      need = Math.max(need, t + walk / this.golemSpeed(it.type, it.elite));
       t += it.gap;
     }
     return need;
+  }
+
+  // Walking speed after weekly twists and tougher-variant rolls.
+  golemSpeed(type, elite = []) {
+    const m = this.mods.golemSpeed;
+    let v = GOLEMS[type].speed * (m['*'] || 1) * (m[type] || 1);
+    for (const e of elite || []) v *= ELITES[e].speed || 1;
+    return v;
   }
 
   get dayCleared() {
@@ -468,7 +520,7 @@ export class Game {
     const b = pick(manned);
     const line = pick(CHORE_LINES).replace('{NAME}', b.name.toUpperCase());
     this.parents.push(new Parent(this, b.home, line, 5));
-    b.callForChore(CHORE_TIME);
+    b.callForChore(CHORE_TIME * this.mods.chore);
     this.audio.play('yell');
     this.ui.toast(`📢 ${b.name}'s been called in for chores! His fort is empty for a bit.`, 'warn');
   }
@@ -519,6 +571,7 @@ export class Game {
   // The big button / Space: head out in the morning, or skip dinner time
   // (and the wait for it once the trail is clear) straight to the next morning.
   mainAction() {
+    if (this.perkOffer) return this.ui.showPerks(this.perkOffer, weekOf(this.wave + 1));
     if (this.phase === 'morning') this.startWave();
     else if (this.canSkip) this.skipToMorning();
   }
@@ -560,6 +613,29 @@ export class Game {
     this.ui.toast(`☀️ Day ${day} of the holidays${day % 7 === 1 ? ` · Week ${weekOf(day)}` : ''}. Build, then head out when you're ready.`);
     this.openStages(day);
     this.ui.setWavePreview();
+    if (day > 1 && day % 7 === 1) this.offerPerks();
+  }
+
+  // ---------- weekly picks ----------
+  offerPerks() {
+    const cards = drawPerks(this.perks);
+    if (!cards.length) return;
+    this.perkOffer = cards;
+    this.ui.showPerks(cards, weekOf(this.wave + 1));
+  }
+
+  takePerk(key) {
+    const p = this.perkOffer && this.perkOffer.find((c) => c.key === key);
+    if (!p) return;
+    this.perkOffer = null;
+    this.perks.push(p.key);
+    p.apply(this.mods, this);
+    this.audio.play('upgrade');
+    this.ui.hidePerks();
+    this.ui.toast(`${p.icon} ${p.name}: ${p.text}`, 'good');
+    this.ui.renderPerks();
+    this.ui.setWavePreview();
+    if (this.selected) this.ui.renderPanel();
   }
 
   // Anything new starting today: new golems, new rifts.
@@ -598,7 +674,9 @@ export class Game {
 
   // Parents decide who's grounded or kept in late today. Never more than a third of the crew.
   rollTrouble(day) {
-    const t = troubleFor(day);
+    const t = { ...troubleFor(day) };
+    t.grounded *= this.mods.trouble;
+    t.late *= this.mods.trouble;
     const maxOut = Math.floor(this.boys.length / 3);
     let out = 0;
     for (const b of [...this.boys].sort(() => Math.random() - 0.5)) {
@@ -791,6 +869,10 @@ export class Game {
         if (k.startsWith('arrow')) e.preventDefault();
         return;
       }
+      if (this.perkOffer && k >= '1' && k <= String(this.perkOffer.length)) {
+        this.takePerk(this.perkOffer[+k - 1].key);
+        return;
+      }
       if (k >= '1' && k <= String(WEAPON_KEYS.length)) this.setBuild(WEAPON_KEYS[+k - 1]);
       else if (k === ' ') {
         e.preventDefault();
@@ -836,7 +918,7 @@ export class Game {
         this.pendingSpot = null;
       }
       if (reason) return this.fail(reason);
-      if (this.points < w.cost) return this.fail(`Need ⭐${w.cost}`);
+      if (this.points < this.fortCost(this.buildKey)) return this.fail(`Need ⭐${this.fortCost(this.buildKey)}`);
       this.placeFort(this.ground.x, this.ground.z, this.buildKey, shift);
       return;
     }
@@ -858,7 +940,7 @@ export class Game {
 
     if (this.buildKey && this.groundOk) {
       const w = WEAPONS[this.buildKey];
-      const ok = !this.placeReason(this.ground.x, this.ground.z) && this.points >= w.cost;
+      const ok = !this.placeReason(this.ground.x, this.ground.z) && this.points >= this.fortCost(this.buildKey);
       const col = ok ? 0x66ff88 : 0xff5a4a;
       this.ghost.visible = true;
       this.ghost.position.set(this.ground.x, 0, this.ground.z);
@@ -953,7 +1035,7 @@ export class Game {
       this.spawnTimer -= dt;
       while (this.queue.length && this.spawnTimer <= 0) {
         const it = this.queue.shift();
-        this.spawnGolem(it.type, undefined, undefined, it.rift || 0);
+        this.spawnGolem(it.type, undefined, undefined, it.rift || 0, { elite: it.elite });
         this.spawnTimer += it.gap;
       }
       // Once every golem is dealt with, the afternoon flies by until dinner.

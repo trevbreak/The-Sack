@@ -203,7 +203,7 @@ export const STAGES = [
   { day: 18, golem: 'goop', text: 'Goop golems! Smash one and you get two.' },
   { day: 22, golem: 'robot', rift: 2, text: 'Week 4: a third rift has opened in the east paddock, right near the houses. Robot golems too.' },
   { day: 25, golem: 'dropbear', text: 'Drop bears! They leap onto forts and scare the kids stiff.' },
-  { day: 29, golem: 'wood', text: 'Week 5: Wood golems. They grow back if you stop hitting them.' },
+  { day: 29, golem: 'wood', text: 'Week 5: Wood golems grow back if you stop hitting them. And watch out: some creatures are turning up Giant, Speedy, Shielded or full of babies.' },
   { day: 32, golem: 'bunyip', text: 'Something has crawled out of the creek. Bunyips dive underground where nothing can hit them.' },
   { day: 36, rift: 3, text: 'Week 6: a fourth rift has opened down by the creek. They\'re coming from everywhere now.' },
 ];
@@ -214,6 +214,53 @@ export const riftsOpenOn = (n) => 1 + STAGES.filter((s) => s.rift && s.day <= n)
 
 // Build the spawn list for day n. Each entry: { type, gap, rift } where gap is the
 // delay (seconds) before the next golem and rift is where it climbs out.
+// ---------- tougher variants (from week 5) ----------
+// hp / speed / size / reward multiply the creature's own numbers.
+export const ELITES = {
+  giant: { name: 'Giant', icon: '🔺', color: 0xff5a3a, hp: 2.2, speed: 0.85, size: 1.35, reward: 2, desc: 'twice the health, a bit slower' },
+  speedy: { name: 'Speedy', icon: '💨', color: 0x6cf0ff, hp: 0.85, speed: 1.55, reward: 1.4, desc: 'much faster' },
+  shielded: { name: 'Shielded', icon: '🛡️', color: 0x8fb8ff, shield: 0.7, reward: 1.6, desc: 'a bubble soaks up hits (zappers pop it fast)' },
+  brood: { name: 'Brood', icon: '🥚', color: 0xc97bff, brood: 3, reward: 1.3, desc: 'bursts into 3 little ones' },
+};
+export const ELITE_DAY = 29;
+export function eliteChance(n) {
+  return n < ELITE_DAY ? 0 : Math.min(0.5, 0.12 + (n - ELITE_DAY) * 0.012);
+}
+
+// ---------- weapon specialisations (once a weapon has all 5 stars) ----------
+// Numbers multiply the weapon's own; anything else replaces it.
+export const SPECS = {
+  slingshot: [
+    { key: 'sniper', name: 'Sniper Slingshot', icon: '🎯', desc: 'Huge range and huge hits, but slow to reload. Aims at the strongest.', mul: { range: 1.7, damage: 3.2, rate: 0.45, projSpeed: 2 }, targeting: 'strong' },
+    { key: 'scatter', name: 'Scatter Shot', icon: '🪨', desc: 'Flings stones at 3 different creatures at once.', mul: { damage: 0.8 }, set: { multi: 3 } },
+  ],
+  balloon: [
+    { key: 'soaker', name: 'Super Soaker', icon: '💦', desc: 'Much bigger splash that soaks creatures right down for longer.', mul: { splash: 1.45 }, set: { slow: 0.65, slowTime: 3.2 } },
+    { key: 'frozen', name: 'Frozen Balloons', icon: '🧊', desc: 'Frozen balloons stop creatures dead for a moment.', mul: { damage: 1.4 }, set: { freeze: 0.9 } },
+  ],
+  rocket: [
+    { key: 'candle', name: 'Roman Candle', icon: '🎇', desc: 'A volley of 3 rockets at 3 creatures.', mul: { damage: 0.45, rate: 1.1 }, set: { multi: 3 } },
+    { key: 'bertha', name: 'Big Bertha', icon: '💣', desc: 'One enormous rocket with a massive blast.', mul: { damage: 2, splash: 1.9, rate: 0.6 } },
+  ],
+  dart: [
+    { key: 'sticky', name: 'Sticky Darts', icon: '🍯', desc: 'Every dart gums creatures up and slows them.', mul: { damage: 1.15 }, set: { hitSlow: 0.3, slowTime: 1.2 } },
+    { key: 'mega', name: 'Mega Gatling', icon: '🌀', desc: 'Spins up to a ridiculous fire rate.', mul: { rate: 1.75, range: 0.9 } },
+  ],
+  magnifier: [
+    { key: 'deathray', name: 'Solar Death Ray', icon: '☀️', desc: 'Heats up fast and keeps going: over 6× damage on a long stare.', set: { heatTime: 4, heatRate: 1.3 } },
+    { key: 'prism', name: 'Prism', icon: '🌈', desc: 'The beam splits to burn 2 more creatures nearby.', set: { prism: 2 } },
+  ],
+  zapper: [
+    { key: 'tesla', name: 'Tesla Coil', icon: '⚡', desc: 'Arcs through up to 5 creatures, further apart.', set: { chain: 5, chainR: 6.5, falloff: 0.8 } },
+    { key: 'emp', name: 'EMP Blaster', icon: '📡', desc: 'Stuns what it hits. Triple damage to robots and shields.', mul: { damage: 1.3 }, set: { chain: 1, stun: 0.8, bonusVs: { robot: 3 } } },
+  ],
+  salt: [
+    { key: 'rocksalt', name: 'Rock Salt Cannon', icon: '🔫', desc: 'Fires straight and fast, so it can hit sky lions.', mul: { damage: 1.25, rate: 1.5, projSpeed: 2.6, splash: 0.6 }, set: { arc: false } },
+    { key: 'saltstorm', name: 'Salt Storm', icon: '🌪️', desc: 'Huge salty splash that slows everything in it.', mul: { splash: 1.6 }, set: { slow: 0.35, slowTime: 2 } },
+  ],
+};
+export const specCost = (w) => Math.round(w.cost * 6);
+
 export function makeWave(n) {
   const rnd = mulberry32(n * 7919 + 13);
   const hpScale = (1 + 0.08 * (n - 1) + 0.0065 * (n - 1) ** 2) * DIFF.hp;
@@ -251,6 +298,20 @@ export function makeWave(n) {
     for (let i = list.length - 1; i > 0; i--) {
       const j = Math.floor(rnd() * (i + 1));
       [list[i], list[j]] = [list[j], list[i]];
+    }
+  }
+
+  // From week 5 some creatures turn up as tougher variants, and from about day 50 a few carry two.
+  const chance = eliteChance(n);
+  if (chance > 0) {
+    const keys = Object.keys(ELITES);
+    for (const it of list) {
+      if (rnd() >= chance) continue;
+      it.elite = [keys[Math.floor(rnd() * keys.length)]];
+      if (n >= 50 && rnd() < Math.min(0.4, (n - 49) * 0.015)) {
+        const other = keys.filter((k) => k !== it.elite[0]);
+        it.elite.push(other[Math.floor(rnd() * other.length)]);
+      }
     }
   }
 
@@ -294,6 +355,12 @@ export function summarizeWave(w) {
   const counts = new Map();
   for (const it of w.list) counts.set(it.type, (counts.get(it.type) || 0) + 1);
   return [...counts.entries()].map(([type, count]) => ({ type, count }));
+}
+
+export function summarizeElites(w) {
+  const counts = new Map();
+  for (const it of w.list) for (const e of it.elite || []) counts.set(e, (counts.get(e) || 0) + 1);
+  return [...counts.entries()].map(([key, count]) => ({ key, count }));
 }
 
 // What parents yell. {NAME} gets swapped for the boy's name.

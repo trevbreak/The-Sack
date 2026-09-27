@@ -44,6 +44,7 @@
     <div id="rightCol">
     <div id="wavePanel" class="panel">
       <h4 id="waveTitle">Next up</h4>
+      <div id="perkStrip" class="hidden" title="This holiday's picks"></div>
       <div class="daybar"><div id="dayFill"></div><span class="t1">🎒 3:30</span><b id="clock">3:30pm</b><span class="t2">🍝 6:00</span></div>
       <div id="waveInfo"></div>
       <button id="waveBtn">▶ Start Wave 1</button>
@@ -56,6 +57,15 @@
     <div id="toasts"></div>
     <div id="hint" class="hidden"></div>
     <div id="buildbar"></div>
+
+    <div id="perkPick" class="overlay hidden">
+      <div class="perkcard">
+        <div class="perkhead"><span id="perkWeek">Week 2</span></div>
+        <h2>Sunday Night Plans</h2>
+        <p>A new week of holidays. Pick one thing to help the crew. It lasts all holidays.</p>
+        <div id="perkCards"></div>
+      </div>
+    </div>
 
     <div id="title" class="overlay">
       <div class="titlecard">
