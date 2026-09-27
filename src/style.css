@@ -91,22 +91,29 @@ button {
   font-size: 18px;
   font-weight: 400;
 }
+.iconbtn.off { opacity: 0.4; text-decoration: line-through; }
 .iconbtn:hover { background: rgba(60, 54, 72, 0.9); }
 
 /* ---------- roster ---------- */
 #roster { top: 12px; left: 12px; width: 230px; max-height: calc(100vh - 200px); overflow: auto; }
 .boy {
   display: flex;
-  gap: 10px;
-  align-items: flex-start;
-  padding: 6px 8px;
-  border-radius: 10px;
+  gap: 7px;
+  align-items: center;
+  padding: 2px 6px;
+  border-radius: 8px;
   cursor: pointer;
+  white-space: nowrap;
 }
 .boy:hover { background: var(--panel-2); }
-.boy b { font-size: 14px; }
-.boy em { font-style: normal; font-size: 11px; color: var(--gold); margin-left: 4px; }
-.boy small { display: block; font-size: 11px; color: var(--muted); }
+.boy b { font-size: 13px; flex: none; }
+.boy small { flex: 1; min-width: 0; text-align: right; font-size: 11px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
+.boy .dot { margin-top: 0; width: 10px; height: 10px; }
+#crewHead { cursor: pointer; user-select: none; display: flex; align-items: baseline; gap: 6px; }
+#crewSum { flex: 1; font-family: 'Nunito', sans-serif; font-size: 11px; color: var(--muted); letter-spacing: 0; text-transform: none; }
+#crewHead .caret { font-style: normal; font-size: 11px; color: var(--muted); transition: transform 0.15s; }
+body.crew-min #crewHead .caret { transform: rotate(-90deg); }
+body.crew-min #rosterList, body.crew-min #roster .note { display: none; }
 .dot { width: 12px; height: 12px; border-radius: 50%; flex: none; margin-top: 4px; border: 2px solid rgba(255, 255, 255, 0.7); display: inline-block; }
 .note { margin: 8px 0 0; font-size: 11px; color: var(--muted); line-height: 1.35; font-weight: 600; }
 
@@ -114,8 +121,19 @@ button {
 #rightCol { position: fixed; top: 12px; right: 12px; bottom: 210px; width: 280px; z-index: 5; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
 #rightCol .panel { position: relative; pointer-events: auto; }
 #wavePanel { flex: none; }
-.chips { display: flex; flex-wrap: wrap; gap: 6px; }
-.chip { font-size: 12px; padding: 3px 9px; border-radius: 999px; background: var(--panel-2); border: 1px solid var(--line); }
+@media (max-height: 900px) {
+  #rightCol:has(#fortPanel:not(.hidden)) #waveInfo,
+  #rightCol:has(#trailPanel:not(.hidden)) #waveInfo,
+  #rightCol:has(#fortPanel:not(.hidden)) .daybar,
+  #rightCol:has(#trailPanel:not(.hidden)) .daybar { display: none; }
+}
+#rightCol:has(#fortPanel:not(.hidden)) .tips,
+#rightCol:has(#trailPanel:not(.hidden)) .tips { display: none; }
+.chips { display: flex; flex-wrap: wrap; gap: 5px; }
+#waveInfo { margin-bottom: 10px; }
+#waveInfo .tips { margin-bottom: 0; }
+.chip b { margin-left: 2px; font-size: 11px; }
+.chip { font-size: 12px; padding: 2px 7px; border-radius: 999px; background: var(--panel-2); border: 1px solid var(--line); }
 .chip.el-fire { border-color: #ff7a2f; color: #ffc29a; }
 .chip.el-ice { border-color: #7fdcff; color: #c8f1ff; }
 .chip.el-stone { border-color: #a79f94; color: #e0dad2; }
@@ -125,6 +143,7 @@ button {
 .chip.el-robot { border-color: #ff6b6b; color: #ffd0d0; }
 .chip.el-wood { border-color: #9dff6a; color: #d8f0c0; }
 .chip.el-magma { border-color: #ff4a1a; color: #ffb08a; background: rgba(255, 74, 26, 0.15); }
+.tips b { color: var(--gold); font-size: 10px; margin-right: 3px; }
 .tips { margin: 8px 0 10px; padding-left: 16px; font-size: 12px; color: var(--muted); font-weight: 600; line-height: 1.4; }
 #waveBtn {
   width: 100%;
@@ -143,7 +162,7 @@ button {
 #waveBtn:disabled { background: #4a4452; color: var(--muted); box-shadow: none; cursor: default; font-size: 15px; }
 
 /* ---------- fort panel ---------- */
-#fortPanel { min-height: 0; overflow: auto; }
+#fortPanel { flex: 0 1 auto; min-height: 0; overflow: auto; }
 .ph { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 8px; }
 .ph h3 { margin: 0; font-family: var(--display); font-weight: 400; font-size: 20px; letter-spacing: 1px; }
 .ph .sub { font-size: 13px; color: var(--muted); }
@@ -152,7 +171,8 @@ button {
 .crewline { font-size: 13px; margin-bottom: 8px; line-height: 1.35; }
 .crewline.bad { color: #ffab9f; }
 .warn { font-size: 12px; color: #ffcf8a; margin-bottom: 6px; }
-.sendlist { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
+.sendhead { font-size: 12px; color: var(--muted); font-weight: 700; margin-bottom: 4px; }
+.sendlist { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-bottom: 8px; max-height: 100px; overflow-y: auto; }
 .small {
   display: flex;
   align-items: center;
@@ -166,14 +186,17 @@ button {
   text-align: left;
   margin-bottom: 8px;
 }
-.sendlist .small { margin: 0; }
+.sendlist .small { margin: 0; padding: 5px 7px; gap: 6px; min-width: 0; }
+.sendlist .small > span:last-child { min-width: 0; overflow: hidden; }
+.sendlist .small b { display: block; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sendlist .small em { display: block; margin: 0; font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .small .dot { margin: 0; }
 .small em { margin-left: auto; font-style: normal; color: var(--gold); font-size: 11px; }
 .small:hover { background: rgba(255, 255, 255, 0.12); }
-.stats { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 10px; }
-.stats div { background: var(--panel-2); border-radius: 10px; padding: 6px 9px; }
-.stats span { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
-.stats b { font-family: var(--display); font-weight: 400; font-size: 18px; letter-spacing: 1px; }
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-bottom: 10px; }
+.stats div { background: var(--panel-2); border-radius: 8px; padding: 4px 6px; text-align: center; min-width: 0; }
+.stats span { display: block; font-size: 8.5px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stats b { font-family: var(--display); font-weight: 400; font-size: 16px; letter-spacing: 1px; }
 .ups { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
 .ups button {
   display: grid;

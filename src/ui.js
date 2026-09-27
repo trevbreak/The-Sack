@@ -1,4 +1,4 @@
-import { WEAPONS, GOLEMS, FORT_LEVELS, WEAPON_LEVELS, TEAM_LEVEL, TEAM_BONUS, weaponUpgradeCost, MAX_BOYS, makeWave, summarizeWave, weekOf, DIFFICULTIES } from './config.js';
+import { WEAPONS, GOLEMS, FORT_LEVELS, WEAPON_LEVELS, TEAM_LEVEL, TEAM_BONUS, weaponUpgradeCost, MAX_BOYS, makeWave, summarizeWave, weekOf, DIFFICULTIES, STAGES } from './config.js';
 import { DETOURS } from './path.js';
 import { fetchScores, submitScore, lastName, boardHTML } from './leaderboard.js';
 
@@ -98,8 +98,11 @@ export class UI {
     });
     this.e.waveBtn.addEventListener('click', () => g.mainAction());
     this.e.speed.addEventListener('click', () => g.toggleSpeed());
+    $('crewHead').addEventListener('click', () => this.toggleRoster());
+    try { if (localStorage.getItem('theSack.crewMin')) document.body.classList.add('crew-min'); } catch {}
     $('crewBtn').addEventListener('click', () => document.body.classList.toggle('show-crew'));
     this.e.mute.addEventListener('click', () => g.toggleMute());
+    $('musicBtn').addEventListener('click', () => g.music.toggle());
     this.e.pause.addEventListener('click', () => g.togglePause());
     this.e.panel.addEventListener('click', (ev) => {
       const b = ev.target.closest('button');
@@ -173,6 +176,7 @@ export class UI {
     setText(e.boys, `${free}/${g.boys.length}`);
     setText(e.speed, `${g.speed}×`);
     setText(e.mute, g.audio.muted ? '🔇' : '🔊');
+    $('musicBtn').classList.toggle('off', !g.music.on);
     setText(e.pause, g.paused ? '▶' : '⏸');
 
     const key = `${g.points}|${g.boys.length}|${g.recruits}|${g.detours.size}|${g.phase}`;
@@ -240,11 +244,16 @@ export class UI {
     const sum = summarizeWave(w);
     setText(this.e.waveTitle, `${g.phase === 'morning' ? 'This arvo · ' : ''}Day ${n} · Week ${weekOf(n)}`);
     const chips = sum
-      .map(({ type, count }) => `<span class="chip el-${type}">${GOLEMS[type].icon} ${GOLEMS[type].name} ×${count}</span>`)
+      .map(({ type, count }) => `<span class="chip el-${type}" title="${GOLEMS[type].name}">${GOLEMS[type].icon}<b>${count}</b></span>`)
       .join('');
-    const tips = sum.map(({ type }) => `<li>${GOLEMS[type].tip}</li>`).join('');
-    const riftChip = w.rifts > 1 ? `<span class="chip el-rift">🌀 ${w.rifts} rifts</span>` : '';
-    this.e.waveInfo.innerHTML = `<div class="chips">${riftChip}${chips}</div><ul class="tips">${tips}</ul>`;
+    // Only explain creatures that are new (arrived in the last few days) or the boss.
+    const fresh = new Set(STAGES.filter((s) => s.golem && s.day <= n && n - s.day < 3).map((s) => s.golem));
+    const tips = sum
+      .filter(({ type }) => fresh.has(type) || GOLEMS[type].boss)
+      .map(({ type }) => `<li><b>${fresh.has(type) ? 'NEW' : 'BOSS'}</b> ${GOLEMS[type].tip}</li>`)
+      .join('');
+    const riftChip = w.rifts > 1 ? `<span class="chip el-rift" title="${w.rifts} rifts open">🌀<b>${w.rifts}</b></span>` : '';
+    this.e.waveInfo.innerHTML = `<div class="chips">${riftChip}${chips}</div>${tips ? `<ul class="tips">${tips}</ul>` : ''}`;
   }
 
   // ---------- fort panel ----------
@@ -273,16 +282,16 @@ export class UI {
     const away = { grounded: '😠 Grounded today', late: '⏰ Out later' };
     const boyBtn = (b, verb, extra) =>
       b.away
-        ? `<button class="small boybtn" disabled><span class="dot" style="background:${b.shirtCss}"></span>${b.name}<em>${away[b.away]}</em></button>`
-        : `<button class="small boybtn" data-boy="${b.id}"><span class="dot" style="background:${b.shirtCss}"></span>${verb} ${b.name}<em>${extra}</em></button>`;
+        ? `<button class="small boybtn" disabled title="${b.name}: ${away[b.away]}"><span class="dot" style="background:${b.shirtCss}"></span><span><b>${b.name}</b><em>${away[b.away]}</em></span></button>`
+        : `<button class="small boybtn" data-boy="${b.id}" title="${verb} ${b.name} (${extra})"><span class="dot" style="background:${b.shirtCss}"></span><span><b>${b.name}</b><em>${extra}</em></span></button>`;
     let crew = f.crew
       .map((b, i) => `<div class="crewmate"><span class="dot" style="background:${b.shirtCss}"></span><div><b>${b.name}</b> <em>${b.trait.name}</em><small id="fp-cm-${i}"></small></div><button class="x" data-a="home" data-who="${b.id}" title="Send ${b.name} back to the sack">✕</button></div>`)
       .join('');
     if (f.crew.length < f.maxCrew) {
       const pool = freeBoys.length ? freeBoys.map((b) => boyBtn(b, 'Send', b.trait.name)) : others.filter((b) => !f.crew.includes(b)).map((b) => boyBtn(b, 'Move', `from ${b.fort.weapon.short}`));
-      if (f.crew.length) crew += `<div class="teamnote">🤝 Room for one more! Two kids work as a team: ${pct(TEAM_BONUS.rate)} fire rate, ${pct(TEAM_BONUS.dmg)} damage, and both their skills count.</div>`;
+      if (f.crew.length) crew += `<div class="teamnote">🤝 Room for one more: a team gets ${pct(TEAM_BONUS.rate)} fire rate and ${pct(TEAM_BONUS.dmg)} damage.</div>`;
       if (!freeBoys.length) crew += `<div class="warn">No free boys. Recruit one (<b>R</b>)${pool.length ? ' or pull one from another fort:' : '.'}</div>`;
-      if (pool.length) crew += `<div class="sendlist">${pool.join('')}</div>`;
+      if (pool.length) crew += `${freeBoys.length ? '<div class="sendhead">Send a kid:</div>' : ''}<div class="sendlist">${pool.join('')}</div>`;
     } else if (f.maxCrew === 1) {
       crew += `<div class="teamnote strong">👥 Only fits one kid. Build it up to a ${FORT_LEVELS[TEAM_LEVEL].name} (<b>U</b>) to fit a second kid. Two kids work as a team.</div>`;
     }
@@ -292,14 +301,6 @@ export class UI {
         <div><h3>${fl.name}</h3><div class="sub">${w.icon} ${w.short} <span class="stars">${stars(f.wlevel)}</span></div></div>
         <button class="x" data-a="close" title="Close (Esc)">✕</button>
       </div>
-      <div class="crewline" id="fp-crew"></div>
-      ${crew}
-      <div class="stats">
-        <div><span>Range</span><b id="fp-range"></b></div>
-        <div><span>Damage</span><b id="fp-dmg"></b></div>
-        <div><span>${w.beam ? 'Heat' : 'Shots/sec'}</span><b id="fp-rate"></b></div>
-        <div><span>Takedowns</span><b id="fp-kills"></b></div>
-      </div>
       <div class="ups">
         ${next
           ? `<button data-a="upFort" id="fp-upFort"><b>🔨 Build it up → ${next.name}</b><small>More range and damage · U</small><span class="cost">⭐ ${next.cost}</span></button>`
@@ -307,6 +308,14 @@ export class UI {
         ${f.wlevel < MAX_W
           ? `<button data-a="upWeapon" id="fp-upW"><b>⚙️ Upgrade ${w.short} ${stars(f.wlevel + 1)}</b><small>Hits harder, fires faster · G</small><span class="cost">⭐ ${weaponUpgradeCost(w, f.wlevel)}</span></button>`
           : `<div class="maxed">🏆 ${w.short} maxed out</div>`}
+      </div>
+      <div class="crewline" id="fp-crew"></div>
+      ${crew}
+      <div class="stats">
+        <div><span>Range</span><b id="fp-range"></b></div>
+        <div><span>Damage</span><b id="fp-dmg"></b></div>
+        <div><span>${w.beam ? 'Heat' : 'Shots/s'}</span><b id="fp-rate"></b></div>
+        <div><span>K.O.s</span><b id="fp-kills"></b></div>
       </div>
       <div class="targeting"><span>Aim at</span>${TARGETS.map(([t, l]) => `<button data-a="target" data-t="${t}" class="${f.targeting === t ? 'on' : ''}">${l}</button>`).join('')}</div>
       <button data-a="sell" class="sell">Pull it down (+⭐ ${f.sellValue()})</button>
@@ -347,29 +356,38 @@ export class UI {
   }
 
   // ---------- roster ----------
+  // One short line per kid so a full crew of 20 still fits.
   renderRoster() {
     this.e.roster.innerHTML = this.g.boys
       .map(
-        (b) => `<div class="boy" data-boy="${b.id}">
-          <span class="dot" style="background:${b.shirtCss}"></span>
-          <div><b>${b.name}</b> <em>${b.trait.name}</em><small id="bs-${b.id}"></small></div>
+        (b) => `<div class="boy" data-boy="${b.id}" title="${b.name} · ${b.trait.name}: ${b.trait.desc}">
+          <span class="dot" style="background:${b.shirtCss}"></span><b>${b.name}</b><small id="bs-${b.id}"></small>
         </div>`,
       )
       .join('');
   }
 
   updateRoster() {
+    let free = 0;
+    let busy = 0;
     for (const b of this.g.boys) {
       let s;
-      if (b.away === 'grounded') s = '😠 Grounded today';
-      else if (b.away === 'late') s = '⏰ Out later this arvo';
-      else if (b.state === 'asleep') s = 'Home for dinner 🍝';
-      else if (b.task === 'bed') s = 'Heading home for dinner';
-      else if (b.onChore) s = b.state === 'inside' ? `Doing chores (${Math.ceil(b.choreT)}s)` : 'Called home for chores';
-      else if (b.fort) s = b.state === 'manning' ? `Manning the ${b.fort.weapon.short}` : `Running to the ${b.fort.weapon.short}`;
-      else s = b.state === 'walking' ? 'Heading to the sack' : 'Chilling in the sack';
+      if (b.away === 'grounded') s = '😠 Grounded';
+      else if (b.away === 'late') s = '⏰ Out later';
+      else if (b.state === 'asleep' || b.task === 'bed') s = '🍝 Dinner';
+      else if (b.onChore) s = b.state === 'inside' ? `🧹 Chores ${Math.ceil(b.choreT)}s` : '🧹 Chores';
+      else if (b.fort) s = b.state === 'manning' ? `${b.fort.weapon.icon} ${b.fort.weapon.short}` : `🏃 ${b.fort.weapon.short}`;
+      else s = '🙂 Free';
+      if (b.fort) busy++;
+      else if (!b.away) free++;
       setText($(`bs-${b.id}`), s);
     }
+    setText($('crewSum'), `${busy} on forts · ${free} free`);
+  }
+
+  toggleRoster() {
+    const on = document.body.classList.toggle('crew-min');
+    try { localStorage.setItem('theSack.crewMin', on ? '1' : ''); } catch {}
   }
 
   // ---------- messages / overlays ----------

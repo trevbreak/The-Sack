@@ -74,7 +74,7 @@ The game works with touch: drag to move, pinch to zoom, twist two fingers to rot
 *   **The holidays never end on their own.** They last until the golems take the sack, and then it's back to school. Your best day is saved as a high score. The sack gets 1 health back each morning.
 *   **Every week gets harder:**
     *   Week 1: 🔥 Fire golems, then ⚡ Storm on day 4, then 🕷️ Huntsman Spiders on day 5 (pounce forward down the trail)
-    *   Week 2 (day 8): a **second rift** opens in the north-east bush, and ❄️ Ice golems arrive. 🦁 **Sky Lions** on day 11: they fly straight over the houses, ignoring the trail, and lobbed weapons (balloons, salt) can't reach them
+    *   Week 2 (day 8): a **second rift** opens in the north-east bush, and ❄️ Ice golems arrive. 🦁 **Sky Lions** on day 11: they fly above the trail, and lobbed weapons (balloons, salt) can't reach them
     *   Week 3 (day 15): 🪨 Stone golems, then 🟢 Goop on day 18 (splits in two when smashed)
     *   Week 4 (day 22): a **third rift** opens in the east paddock, near the houses, and 🤖 Robots arrive (armour cuts every hit). 🐨 **Drop Bears** on day 25: they leap onto the first manned fort they pass and scare the kids stiff for 4 seconds
     *   Week 5 (day 29): 🪵 Wood golems (regrow if you stop hitting them). 🐊 **Bunyips** on day 32: they dive underground every few seconds, where nothing can hit them
@@ -100,7 +100,7 @@ The game works with touch: drag to move, pinch to zoom, twist two fingers to rot
 | WASD / arrows | Move camera |
 | Q / E, right-drag | Rotate camera |
 | Scroll | Zoom |
-| F / P / M | Speed / pause / mute |
+| F / P / M / N | Speed (up to 5×) / pause / mute / music |
 
 ## Code map
 
@@ -111,3 +111,4 @@ The game works with touch: drag to move, pinch to zoom, twist two fingers to rot
 *   `src/game.js`: game loop, input, camera, waves, economy
 *   `src/ui.js`, `src/style.css`, `index.html`: HUD and menus
 *   `src/audio.js`: synthesized sound effects (no audio files)
+*   `src/music.js`: the synthesized adventure theme

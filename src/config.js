@@ -90,7 +90,7 @@ export const GOLEMS = {
     name: 'Sky Lion', icon: '🦁', hp: 110, speed: 2.8, reward: 14, size: 1.1, damage: 2,
     color: 0xd9a441, emissive: 0x1a0e00, glow: 0xfff2a0, body: 'lion', extraColor: 0x8a4b1a, flying: true,
     resist: { zap: 1.8, impact: 1.3, water: 0.7 },
-    tip: 'Sky lions fly straight over the houses. 🎈🧂 Lobbed weapons can\'t reach them. 🔌🎯🎆 can.',
+    tip: 'Sky lions fly above the trail. 🎈🧂 Lobbed weapons can\'t reach them. 🔌🎯🎆 can.',
   },
   dropbear: {
     name: 'Drop Bear', icon: '🐨', hp: 140, speed: 2.4, reward: 12, size: 1.0, damage: 1,
@@ -143,7 +143,7 @@ export const WEAPONS = {
   },
   zapper: {
     key: 'zapper', name: 'Bug Zapper Fort', short: 'Bug Zapper', icon: '🔌', cost: 140,
-    dmgType: 'zap', damage: 20, rate: 0.9, range: 11, chain: 3,
+    dmgType: 'zap', damage: 17, rate: 0.85, range: 11, chain: 2,
     desc: 'Zaps one golem, then arcs to the ones next to it.',
   },
   salt: {
@@ -198,7 +198,7 @@ export const STAGES = [
   { day: 4, golem: 'storm', text: 'Storm golems! Small, fast and sparky.' },
   { day: 5, golem: 'spider', text: 'Huntsman spiders! Big hairy ones that pounce down the trail.' },
   { day: 8, golem: 'ice', rift: 1, text: 'Week 2: a second rift has torn open in the north-east bush. Ice golems are coming.' },
-  { day: 11, golem: 'lion', text: 'SKY LIONS! They fly straight over the houses. Balloons and salt can\'t reach them.' },
+  { day: 11, golem: 'lion', text: 'SKY LIONS! They fly high above the trail. Balloons and salt can\'t reach them.' },
   { day: 15, golem: 'stone', text: 'Week 3: Stone golems. Slow, and very hard to knock over.' },
   { day: 18, golem: 'goop', text: 'Goop golems! Smash one and you get two.' },
   { day: 22, golem: 'robot', rift: 2, text: 'Week 4: a third rift has opened in the east paddock, right near the houses. Robot golems too.' },

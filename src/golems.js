@@ -85,7 +85,7 @@ export class Golem {
     this.game = game;
     // Golems from a later rift walk its spur trail first, then join the main trail.
     this.rift = rift;
-    this.onSpur = !GOLEMS[key].flying && !!game.spurs[rift];
+    this.onSpur = !!game.spurs[rift];
     // Ability timers
     const d0 = GOLEMS[key];
     this.hopT = d0.hop ? d0.hop.every * (0.5 + Math.random() * 0.5) : 0;
@@ -280,7 +280,6 @@ export class Golem {
   }
 
   get trail() {
-    if (this.def.flying) return this.game.flightPath(this.rift);
     return this.onSpur ? this.game.spurs[this.rift] : this.game.path;
   }
 
@@ -297,7 +296,6 @@ export class Golem {
   // How far this golem still has to walk to reach the sack.
   get remaining() {
     const g = this.game;
-    if (this.def.flying) return this.trail.length - this.dist;
     if (this.onSpur) return g.spurs[this.rift].length - this.dist + g.path.length - g.joinDists[this.rift];
     return g.path.length - this.dist;
   }
@@ -349,7 +347,7 @@ export class Golem {
       this.dist = g.joinDists[this.rift] + this.dist - this.trail.length;
       this.onSpur = false;
     }
-    if (this.dist >= (d.flying ? this.trail.length : g.path.length)) {
+    if (this.dist >= g.path.length) {
       this.alive = false;
       this.done = true;
       g.golemReachedSack(this);
