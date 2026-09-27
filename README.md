@@ -142,4 +142,4 @@ The game works with touch: drag to move, pinch to zoom, twist two fingers to rot
 *   `src/game.js`: game loop, input, camera, waves, economy
 *   `src/ui.js`, `src/style.css`, `index.html`: HUD and menus
 *   `src/audio.js`: synthesized sound effects (no audio files)
-*   `src/music.js`: the synthesized adventure theme
+*   `src/music.js`: the synthesized adventure score (fanfare, theme, heroic chorus, sneaky whimsy section)
