@@ -1,6 +1,23 @@
 # The Sack
 
+**A game by AJ and Kai**
+
 A 3D fort-defence game. A crew of boys on a suburban cul-de-sac (Wattle Court) build forts along the fire trail behind their houses to hold off waves of elemental golems coming out of the bush.
+
+![A busy afternoon on the fire trail: forts, creatures and the kids arguing about who's dead](docs/screenshots/afternoon.jpg)
+
+## Screenshots
+
+| | |
+|---|---|
+| ![Title screen with difficulty picker and household leaderboard](docs/screenshots/title.jpg) | ![A Sky Fort's rocket launcher at 5 stars, choosing between Roman Candle and Big Bertha](docs/screenshots/specialise.jpg) |
+| **Title screen** with difficulties and the household leaderboard | **Specialisations** once a weapon has all 5 stars |
+| ![Sunday Night Plans: pick one of three cards for the week](docs/screenshots/weekly-pick.jpg) | ![Giant, Shielded, Speedy and Brood creature variants with coloured rings](docs/screenshots/variants.jpg) |
+| **Sunday Night Plans**: a new pick each week | **Tougher variants** from week 5 |
+| ![The dusk reveal: the picture goes sepia and a mum asks why they're yelling at the bushes](docs/screenshots/what-mum-sees.jpg) | ![Tonight on Wattle Court: a sleepover decision at the dinner table](docs/screenshots/tonight.jpg) |
+| **…what Mum sees** at dusk | **Tonight on Wattle Court**: choices at the dinner table |
+
+<p align="center"><img src="docs/screenshots/phone.jpg" alt="The game on a phone in portrait" width="260"><br><b>On a phone</b></p>
 
 ## Run it on your computer
 
